@@ -17,9 +17,11 @@ $('mOuro').innerHTML = AG.map((a, i) => a.m === 'Ouro' ? deskHTML(a, i) : '').jo
 $('mGlobal').innerHTML = AG.map((a, i) => a.m === 'Global' ? deskHTML(a, i) : '').join('');
 const BOSS = [{ id: 'risco', p: 'Helena', c: 'Gestora de Risco', cor: '#e0645c' }, { id: 'perf', p: 'Marcos', c: 'Analista de Performance', cor: '#9b8cf0' }, { id: 'tes', p: 'Paulo', c: 'Tesoureiro', cor: '#3fbf7f' }];
 $('board').innerHTML = BOSS.map((b, k) => `<article class="boss"><div class="hd"><div class="face">${face(101 + k * 37, b.cor, 1)}</div><div class="who"><b>${b.p}</b><small>${b.c}</small></div><span class="sev ok" id="b_${b.id}_sev">ok</span></div><div class="msg" id="b_${b.id}">—</div></article>`).join('');
-$('kMeta').textContent = '+' + fmt(METAT, 1) + '%';
 
-let R = null, Hh = null, lastKey = null;
+
+let R = null, Hh = null, lastKey = null, BRL = null;
+async function dolar() { try { const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', { cache: 'no-store' }); const j = await r.json(); BRL = parseFloat(j.USDBRL.bid); render(); } catch (e) { } }
+dolar(); setInterval(dolar, 60000);
 function pop(i, v) {
   const el = $('d' + i); if (!el) return; const p = document.createElement('span'); p.className = 'pop ' + (v >= 0 ? 'pos' : 'neg'); p.textContent = sg(v); el.appendChild(p);
   el.classList.add(v >= 0 ? 'flash-w' : 'flash-l'); setTimeout(() => { p.remove(); el.classList.remove('flash-w', 'flash-l'); }, 1600);
@@ -49,11 +51,22 @@ function render() {
   $('clock').innerHTML = `${(R.servidor || '').slice(0, 16)}<small>servidor · Brasília ${R.local || ''} · conta ${R.login || ''}</small>`;
   const bal = R.saldo, flut = R.flutuante, eq = bal + flut;   // capital sem bônus/crédito da corretora
   $('kSaldo').textContent = usd(bal); $('kSaldoSub').innerHTML = `capital ${usd(eq)} · flutuante <span class="${flut >= 0 ? 'pos' : 'neg'}">${sg(flut)}</span>`;
-  const h = bal - Hh.inicio_dia; $('kHoje').innerHTML = `<span class="${h >= 0 ? 'pos' : 'neg'}">${sg(h)}</span>`; $('kHojeSub').textContent = sg(100 * h / Hh.inicio_dia) + '%';
-  const m = 100 * (bal / Hh.inicio_mes - 1); $('kMes').innerHTML = `<span class="${m >= 0 ? 'pos' : 'neg'}">${sg(m)}%</span>`; $('kMesBar').style.width = Math.max(0, Math.min(100, m / METAT * 100)) + '%';
+  $('kXau').textContent = R.xau ? 'US$ ' + fmt(R.xau) : '—';
+  if (BRL) { $('kReal').textContent = 'R$ ' + fmt(bal * BRL); $('kDolar').textContent = `dólar R$ ${fmt(BRL, 4)} · capital R$ ${fmt(eq * BRL)}`; }
+  const P = Hh.periodos || {}, dIni = Hh.inicio || '04/11/2026';
+  const dias = Math.max(1, (Date.now() - new Date(2026, 10, 4).getTime()) / 864e5);
+  const metas = { dia: METAT / 21, semana: METAT / 4.33, mes: METAT, total: METAT * dias / 30.4 };
+  const nomes = { dia: 'Hoje', semana: 'Semana', mes: 'Mês', total: 'Desde ' + dIni };
+  const flutHoje = flut;
+  $('per').innerHTML = ['dia', 'semana', 'mes', 'total'].map(k => {
+    const p = P[k] || { pl: 0, base: bal }; const pl = p.pl, pct = p.base > 0 ? 100 * pl / p.base : 0, mt = metas[k];
+    const w = Math.max(0, Math.min(100, 100 * pct / mt));
+    return `<div class="pc ${pct >= mt ? 'ok' : pct < 0 ? 'neg' : ''}"><span>${nomes[k]} · meta +${fmt(mt)}%</span><strong class="${pl >= 0 ? 'pos' : 'neg'}">${sg(pl)}</strong><em>${sg(pct)}%${BRL ? ' · R$ ' + sg(pl * BRL) : ''}</em><div class="bar"><i style="width:${w}%"></i></div></div>`;
+  }).join('');
+  const m = P.mes && P.mes.base > 0 ? 100 * P.mes.pl / P.mes.base : 0;
   const pico = Math.max(Hh.pico, bal), dd = 100 * Math.max(0, 1 - eq / pico), ddm = Math.max(100 * Hh.dd_max, dd);
   $('kDD').textContent = fmt(dd) + '%'; $('kDDSub').textContent = 'máx ' + fmt(ddm) + '%';
-  $('kSac').textContent = usd(Hh.sacado_total); $('kSacSub').textContent = 'este mês ' + usd(Hh.sacado_mes);
+  $('kSac').textContent = usd(Hh.sacado_total); $('kSacSub').textContent = `este mês ${usd(Hh.sacado_mes)} · desde ${Hh.inicio || '04/11'}`;
   const pos = R.pos ? Object.values(R.pos) : []; $('kAbertas').textContent = pos.length; $('kOps').textContent = Hh.fechadas + ' fechadas';
   // Helena: risco
   const xau = pos.filter(p => p.ativo && p.ativo.indexOf('XAU') === 0), cx = xau.filter(p => p.lado > 0).length, vx = xau.length - cx;

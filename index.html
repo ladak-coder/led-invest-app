@@ -145,6 +145,13 @@ aside h2{color:var(--navy)}
 #login input{background:#fff;color:#111;border-color:#d0d5dd}
 #login button{background:var(--gold);border-color:var(--gold);color:#111}
 .flash-w{box-shadow:0 0 0 2px var(--buy)}.flash-l{box-shadow:0 0 0 2px var(--sell)}
+.per{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.pc{background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.pc span{display:block;font-size:.7rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+.pc strong{display:block;font-family:var(--mono);font-size:1.25rem;margin-top:4px;font-variant-numeric:tabular-nums}
+.pc em{display:block;font-style:normal;font-family:var(--mono);font-size:.78rem;color:var(--mut);margin-top:2px}
+.pc .bar{margin-top:8px}
+.pc.ok{border-color:var(--buy)}.pc.neg{border-color:var(--sell)}
 </style>
 <meta name="theme-color" content="#0f1f3d">
 </head><body>
@@ -159,11 +166,14 @@ aside h2{color:var(--navy)}
 </header>
 <section class="kpis">
   <div class="kpi"><span>Saldo</span><strong id="kSaldo">—</strong><em id="kSaldoSub"></em></div>
-  <div class="kpi"><span>Hoje (fechado)</span><strong id="kHoje">—</strong><em id="kHojeSub"></em></div>
-  <div class="kpi"><span>Mês · meta <b id="kMeta" style="font-weight:inherit"></b></span><strong id="kMes">—</strong><div class="bar"><i id="kMesBar"></i></div></div>
+  <div class="kpi"><span>Saldo em reais</span><strong id="kReal">—</strong><em id="kDolar">cotação do dólar…</em></div>
+  <div class="kpi"><span>Ouro (XAUUSD)</span><strong id="kXau">—</strong><em id="kXauSub">preço atual</em></div>
   <div class="kpi"><span>Queda do topo</span><strong id="kDD">—</strong><em id="kDDSub"></em></div>
   <div class="kpi"><span>Sacado</span><strong id="kSac">—</strong><em id="kSacSub"></em></div>
   <div class="kpi"><span>Em operação</span><strong id="kAbertas">—</strong><em id="kOps"></em></div>
+</section>
+<section class="room" style="margin-top:16px"><h2><b>Andamento</b> resultado × meta</h2>
+  <div class="per" id="per"></div>
 </section>
 <div class="main"><div>
   <section class="room"><h2><b>Diretoria</b> acompanha a mesa</h2><div class="board" id="board"></div></section>
