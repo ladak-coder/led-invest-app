@@ -169,6 +169,13 @@ aside h2{color:var(--navy)}
 .tw th:first-child,.tw td:first-child{text-align:left}
 .tw th{color:var(--mut);font-weight:600}
 .labres summary{cursor:pointer}
+.ata h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:12px 0 4px}
+.ata p{font-size:.85rem;line-height:1.5;margin:4px 0}
+.ata .dir{border-left:3px solid var(--gold);padding:2px 10px;margin:8px 0}
+.ata .dir b{font-size:.8rem}
+.ata .prop{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0;font-size:.82rem}
+.obs{font-family:var(--mono);font-size:.68rem;padding:1px 6px;border-radius:4px;margin-left:6px;white-space:nowrap}
+.obs.ok{background:#e3f4e8;color:#1e7a3c}.obs.al{background:#fde8e8;color:#b42318}.obs.at{background:#fff4dc;color:#8a5a00}.obs.nd{background:#eef0f3;color:#6b7280}
 .btn{font:inherit;font-size:.8rem;background:var(--gold);color:#111;border:0;border-radius:6px;padding:6px 12px;font-weight:700;cursor:pointer;margin-top:8px}
 #rel{display:none}
 @media print{body>*:not(#rel){display:none!important}#rel{display:block!important}body{border:0!important;box-shadow:none!important;padding:0!important;background:#fff!important}}
@@ -205,6 +212,7 @@ aside h2{color:var(--navy)}
 </section>
 <div class="main"><div>
   <section class="room"><h2><b>Diretoria</b> acompanha a mesa</h2><div class="board" id="board"></div></section>
+  <section class="room" id="ataRoom"><h2><b>Reunião da diretoria</b> análise diária feita pelo Claude · <span id="ataAt">—</span></h2><div class="labres" id="ata"><p class="note">A primeira reunião acontece amanhã de manhã.</p></div></section>
   <section class="room"><h2><b>Equipe de apoio</b> carteira, execução, operações, macro, investidores e controladoria</h2><div class="board" id="staff"></div>
     <details class="labres" id="detPort"><summary><b>Carteira: operador × teste</b></summary><div id="portTab" class="tw"></div></details>
     <details class="labres" id="detCtl"><summary><b>Controladoria: resultado por mês</b></summary><div id="ctlTab" class="tw"></div></details>

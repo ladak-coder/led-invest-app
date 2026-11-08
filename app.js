@@ -1,3 +1,4 @@
+let LABJ = null;
 // LED Invest — app ao vivo (Firebase Realtime Database: /led/rapido e /led/historico)
 const $ = id => document.getElementById(id);
 const fmt = (v, d = 2) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -141,29 +142,38 @@ async function labChave(db) {
   await db.ref('led/lab_priv').set(b64(await crypto.subtle.exportKey('pkcs8', kp.privateKey)));
   return kp.privateKey;
 }
+async function abre(nome) {
+  const r = await fetch(nome + '?' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw 0;
+  const raw = unb64((await r.text()).trim());
+  const kraw = await crypto.subtle.decrypt(RSA, LABK, raw.slice(0, 256));
+  const key = await crypto.subtle.importKey('raw', kraw, 'AES-GCM', false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(256, 268) }, key, raw.slice(268))));
+}
 async function lab() {
   if (!LABK) return;
-  try {
-    const r = await fetch('lab.enc?' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw 0;
-    const raw = unb64((await r.text()).trim());
-    const kraw = await crypto.subtle.decrypt(RSA, LABK, raw.slice(0, 256));
-    const key = await crypto.subtle.importKey('raw', kraw, 'AES-GCM', false, ['decrypt']);
-    const J = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(256, 268) }, key, raw.slice(268))));
-    renderLab(J);
-  } catch (e) { $('labAt').textContent = 'aguardando a primeira noite de pesquisa'; }
+  try { renderLab(await abre('lab.enc')); } catch (e) { $('labAt').textContent = 'aguardando a primeira noite de pesquisa'; }
+  try { renderAta(await abre('ata.enc')); } catch (e) { }
+}
+function renderAta(A) {
+  $('ataAt').textContent = A.data || '—';
+  const esc = t => String(t || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  $('ata').innerHTML = `<div class="ata"><p><b>${esc(A.resumo)}</b></p>${(A.diretoria || []).map(d => `<div class="dir"><b>${esc(d.nome)} · ${esc(d.cargo)}</b><p>${esc(d.texto)}</p></div>`).join('')}
+  <h3>Propostas (aguardando sua aprovação: responda no Claude)</h3>${(A.propostas || []).length ? A.propostas.map((p, i) => `<div class="prop"><b>${i + 1}. ${esc(p.titulo)}</b><br>${esc(p.motivo)}<br><i>Ação: ${esc(p.acao)}</i></div>`).join('') : '<p class="note">Nenhuma proposta hoje.</p>'}
+  ${(A.licoes || []).length ? `<h3>Lições anotadas hoje</h3>${A.licoes.map(l => `<p>· ${esc(l)}</p>`).join('')}` : ''}</div>`;
 }
 setInterval(lab, 10 * 60000);
 const fp = v => (v >= 0 ? '+' : '') + Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
 function renderLab(J) {
+  LABJ = J; try { render(); } catch (e) { }
   $('labAt').textContent = `${J.noites} noites · ${Number(J.testados).toLocaleString('pt-BR')} ideias testadas · atualizado ${J.atualizado}`;
   $('labPes').innerHTML = J.pesquisadores.map((p, k) => `<article class="boss" style="border-left-color:${p.cor}"><div class="hd"><div class="face">${face(311 + k * 53, p.cor, p.hoje_aprovados > 0 ? 1 : 0)}</div><div class="who"><b>${p.nome}</b><small>${p.cargo}</small></div><span class="sev ${p.nome === 'Sérgio' ? 'ok' : p.ativos.length ? (p.hoje_aprovados ? 'ok' : 'at') : 'al'}">${p.nome === 'Sérgio' ? (J.validados || 0) + ' validados' : p.ativos.length ? (p.hoje_aprovados ? p.hoje_aprovados + ' novo' + (p.hoje_aprovados > 1 ? 's' : '') : 'pesquisando') : 'sem dados'}</span></div><div class="msg">${p.ativos.length ? 'Última ideia: ' + (p.ultima || '—') : p.status}</div>${p.nome === 'Sérgio' ? '' : `<div class="nums"><span>hoje ${p.hoje_testados} testes</span><span>total ${Number(p.testados).toLocaleString('pt-BR')}</span><span>aprovados ${p.aprovados}</span></div>`}</article>`).join('');
   $('labRegra').textContent = J.regra;
   $('labTit').textContent = `Setups aprovados (${J.aprovados.length}) — aguardando sua decisão; nada entra no robô sem você`;
-  $('labAp').innerHTML = J.aprovados.length ? J.aprovados.map(a => { const m = a.m; return `<details class="ap"><summary><b>${a.valid && a.valid.ok ? '✅ ' : ''}${a.desc}</b><span class="pos">${fp(m.pts_mes)} pts/mês</span></summary><div class="det">${a.quem} · ${a.data.split('-').reverse().join('/')} · ${m.n} operações (${String(m.ops_mes).replace('.', ',')}/mês) · acerto ${String(m.acerto).replace('.', ',')}% · fator de lucro ${String(m.pf).replace('.', ',')} · média ${fp(m.media)} pts/op · queda máx ${fp(-m.dd)} pts<br>2022-2024: ${fp(m.is_pts)} pts (FL ${String(m.is_pf).replace('.', ',')}) · 2025-2026: ${fp(m.oos_pts)} pts (FL ${String(m.oos_pf).replace('.', ',')}) · entrada aleatória igual: FL ${String(m.base_pf).replace('.', ',')}, ${fp(m.base_media)} pts/op · vizinhos lucrando ${a.vizinhos}${a.valid ? `<br><b class="${a.valid.ok ? 'pos' : 'neg'}">Validador: ${a.valid.ok ? 'APROVADO' : 'REPROVADO'}</b> · custo dobrado FL ${String(a.valid.custo2_pf).replace('.', ',')} (${fp(a.valid.custo2_pts)} pts) · queda Monte Carlo 95% ${fp(-a.valid.dd95)} pts · últimos 6 meses ${fp(a.valid.ult6m)} pts (${a.valid.ult6m_n} op)` : ''}<table><tr>${Object.keys(m.anos).map(y => `<td>${y}</td>`).join('')}</tr><tr>${Object.values(m.anos).map(v => `<td class="${v >= 0 ? 'pos' : 'neg'}">${fp(v)}</td>`).join('')}</tr></table></div></details>`; }).join('') : '<p class="note">Nenhum aprovado ainda.</p>';
+  $('labAp').innerHTML = J.aprovados.length ? J.aprovados.map(a => { const m = a.m; return `<details class="ap"><summary><b>${a.valid && a.valid.ok ? '✅ ' : ''}${a.desc}${a.obs ? `<span class="obs ${{ 'confirmado': 'ok', 'falhou na prática': 'al', 'abaixo do esperado': 'at' }[a.obs.status] || 'nd'}">${a.obs.status}${a.obs.n ? ' · ' + a.obs.n + ' op · ' + fp(a.obs.pts) + ' pts' : ''}</span>` : ''}</b><span class="pos">${fp(m.pts_mes)} pts/mês</span></summary><div class="det">${a.quem} · ${a.data.split('-').reverse().join('/')} · ${m.n} operações (${String(m.ops_mes).replace('.', ',')}/mês) · acerto ${String(m.acerto).replace('.', ',')}% · fator de lucro ${String(m.pf).replace('.', ',')} · média ${fp(m.media)} pts/op · queda máx ${fp(-m.dd)} pts<br>2022-2024: ${fp(m.is_pts)} pts (FL ${String(m.is_pf).replace('.', ',')}) · 2025-2026: ${fp(m.oos_pts)} pts (FL ${String(m.oos_pf).replace('.', ',')}) · entrada aleatória igual: FL ${String(m.base_pf).replace('.', ',')}, ${fp(m.base_media)} pts/op · vizinhos lucrando ${a.vizinhos}${a.valid ? `<br><b class="${a.valid.ok ? 'pos' : 'neg'}">Validador: ${a.valid.ok ? 'APROVADO' : 'REPROVADO'}</b> · custo dobrado FL ${String(a.valid.custo2_pf).replace('.', ',')} (${fp(a.valid.custo2_pts)} pts) · queda Monte Carlo 95% ${fp(-a.valid.dd95)} pts · últimos 6 meses ${fp(a.valid.ult6m)} pts (${a.valid.ult6m_n} op)` : ''}<table><tr>${Object.keys(m.anos).map(y => `<td>${y}</td>`).join('')}</tr><tr>${Object.values(m.anos).map(v => `<td class="${v >= 0 ? 'pos' : 'neg'}">${fp(v)}</td>`).join('')}</tr></table></div></details>`; }).join('') : '<p class="note">Nenhum aprovado ainda.</p>';
 }
 
 // ---------- Equipe de apoio ----------
-let AGD = null, BASE = null, LABJ = null;
+let AGD = null, BASE = null;
 fetch('base_teste.json').then(r => r.json()).then(j => { BASE = j; render(); }).catch(() => { });
 const STAFF = [
   { id: 'port', p: 'Fernando', c: 'Gestor de Portfólio', cor: '#2f5d9e' },
@@ -176,6 +186,7 @@ $('staff').innerHTML = STAFF.map((b, k) => `<article class="boss" style="border-
 function sev(id, cls, txt) { const e = $('s_' + id + '_sev'); e.className = 'sev ' + cls; e.textContent = txt; }
 const dias = ms => (Date.now() - ms) / 864e5;
 function renderStaff(vivo, idade, eq, bal) {
+  const RG = LABJ && LABJ.regime && LABJ.regime.agentes ? LABJ.regime : null;
   const A = (Hh && Hh.agentes) || {}, B = (BASE && BASE.base) || {};
   // Fernando: operador ao vivo × teste
   const fora = [], linhas = [];
@@ -186,12 +197,14 @@ function renderStaff(vivo, idade, eq, bal) {
     if (a.ult_ms && dias(a.ult_ms) > Math.max(b.gap_max, 3) * 1.4) st.push(`sem operar há ${Math.round(dias(a.ult_ms))} dias (teste: máx ${b.gap_max})`);
     if (b.mes_med < 0) st.push('resultado médio negativo no teste');
     if (st.length) fora.push(`<b>${g.p}</b> (${g.n}): ${st.join('; ')}`);
-    linhas.push(`<tr><td>${g.p} · ${g.n}</td><td>${a.n || 0}</td><td>${fmt(a.acerto || 0, 0)}% / ${fmt(b.acerto, 0)}%</td><td class="${(a.mes_pct || 0) >= 0 ? 'pos' : 'neg'}">${sg(a.mes_pct || 0)}%</td><td>${fmt(b.mes_med)}% · pior ${fmt(b.mes_pior)}%</td><td>${a.seq || 0} / ${b.seq_max}</td><td>${fmt(b.peso)}x</td><td class="${st.length ? 'neg' : 'pos'}">${st.length ? 'revisar' : 'ok'}</td></tr>`);
+    linhas.push(`<tr><td>${g.p} · ${g.n}</td><td>${a.n || 0}</td><td>${fmt(a.acerto || 0, 0)}% / ${fmt(b.acerto, 0)}%</td><td class="${(a.mes_pct || 0) >= 0 ? 'pos' : 'neg'}">${sg(a.mes_pct || 0)}%</td><td>${fmt(b.mes_med)}% · pior ${fmt(b.mes_pior)}%</td><td>${a.seq || 0} / ${b.seq_max}</td><td>${fmt(b.peso)}x</td><td>${RG && RG.agentes[g.n] && RG.agentes[g.n].media_atual != null ? sg(RG.agentes[g.n].media_atual) + '%/op · ' + RG.agentes[g.n].leitura : '—'}</td><td class="${st.length ? 'neg' : 'pos'}">${st.length ? 'revisar' : 'ok'}</td></tr>`);
   });
   sev('port', fora.length ? 'at' : 'ok', fora.length ? fora.length + ' para revisar' : 'carteira ok');
+  const rgTxt = RG ? Object.entries(RG.atual || {}).map(([k, v]) => `${k} ${v.vol}/${v.tend}`).join(' · ') : '';
+  const melhorR = RG ? AG.filter(g => (RG.agentes[g.n] || {}).leitura === 'melhor').map(g => g.p) : [], piorR = RG ? AG.filter(g => (RG.agentes[g.n] || {}).leitura === 'pior').map(g => g.p) : [];
   const cp = BASE ? BASE.corr_top.slice(0, 3).map(c => `${c[1]} × ${c[2]} (${fmt(c[0])})`).join(', ') : '';
-  $('s_port').innerHTML = (fora.length ? fora.slice(0, 3).join('<br>') + (fora.length > 3 ? `<br>+${fora.length - 3} na tabela.` : '') : 'Todos os operadores dentro do padrão do teste.') + (cp ? `<br><small>Mais parecidos no teste: ${cp}. Correlação média ${fmt(BASE.corr_med)}.</small>` : '');
-  $('portTab').innerHTML = `<table><tr><th>Operador</th><th>Op.</th><th>Acerto real / teste</th><th>Mês</th><th>Teste: mês médio</th><th>Perdas seguidas / máx teste</th><th>Peso sugerido</th><th></th></tr>${linhas.join('')}</table><p class="note">Peso sugerido = risco relativo pelo inverso da oscilação mensal no teste (1,00x = média). Só sugestão: nada é alterado nos robôs.</p>`;
+  $('s_port').innerHTML = (fora.length ? fora.slice(0, 3).join('<br>') + (fora.length > 3 ? `<br>+${fora.length - 3} na tabela.` : '') : 'Todos os operadores dentro do padrão do teste.') + (RG ? `<br>Mercado agora: ${rgTxt}.${melhorR.length ? ` No teste, em regime igual, rendem mais: <b>${melhorR.join(', ')}</b>.` : ''}${piorR.length ? ` Rendem menos: <b>${piorR.join(', ')}</b>.` : ''}` : '') + (cp ? `<br><small>Mais parecidos no teste: ${cp}. Correlação média ${fmt(BASE.corr_med)}.</small>` : '');
+  $('portTab').innerHTML = `<table><tr><th>Operador</th><th>Op.</th><th>Acerto real / teste</th><th>Mês</th><th>Teste: mês médio</th><th>Perdas seguidas / máx teste</th><th>Peso sugerido</th><th>Teste no regime atual</th><th></th></tr>${linhas.join('')}</table><p class="note">Peso sugerido = risco relativo pelo inverso da oscilação mensal no teste (1,00x = média). Só sugestão: nada é alterado nos robôs.</p>`;
   // Clara: execução
   const sp = R.spreads || {}, sps = Object.entries(sp).map(([k, v]) => `${k} ${v}`).join(' · ');
   const sl = AG.map(g => [g, A[g.n] || {}]).filter(x => (x[1].slip_n || 0) > 0).sort((x, y) => y[1].slip - x[1].slip);
