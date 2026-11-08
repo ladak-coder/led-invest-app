@@ -1,0 +1,144 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LED Invest</title><meta name="theme-color" content="#0d1117"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: pregão noturno — barra de comando no topo, diretoria, duas mesas de operadores, feed do pregão ao lado */
+:root{
+  --bg:#0d1117; --panel:#151b24; --desk:#1a2230; --line:#263042; --fg:#e7ecf3; --mut:#8a96a8;
+  --gold:#d9a94a; --glob:#5aa2d6; --buy:#3fbf7f; --sell:#e0645c; --warn:#e3b341;
+  --disp:"Archivo",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--disp);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 32px}
+h1,h2,h3{margin:0;text-wrap:balance}
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.brand h1{font-size:1.6rem;font-weight:800;letter-spacing:.01em}
+.brand h1 b{color:var(--gold)}
+.brand p{margin:.2rem 0 0;color:var(--mut);font-size:.85rem}
+.clock{font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.clock small{display:block;color:var(--mut);font-size:.72rem;font-family:var(--disp)}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ctl label{font-size:.72rem;color:var(--mut);display:flex;flex-direction:column;gap:3px}
+.ctl select,.ctl input,.ctl button{font:inherit;font-size:.85rem;background:var(--desk);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.ctl input{width:7.5em;font-family:var(--mono)}
+.ctl button{cursor:pointer;font-weight:600}
+.ctl button.play{background:var(--gold);color:#1b1407;border-color:var(--gold);min-width:6.5em}
+.ctl button:focus-visible,.ctl select:focus-visible,.ctl input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.kpi span{display:block;font-size:.7rem;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.kpi strong{font-family:var(--mono);font-size:1.15rem;font-variant-numeric:tabular-nums;display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi em{font-style:normal;font-size:.75rem;color:var(--mut);font-family:var(--mono)}
+.pos{color:var(--buy)} .neg{color:var(--sell)}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold);width:0;transition:width .3s}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;margin-top:18px}
+@media (max-width:980px){.main{grid-template-columns:minmax(0,1fr)}}
+.room{margin-bottom:18px}
+.room h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:var(--mut);display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.room h2::after{content:"";flex:1;height:1px;background:var(--line)}
+.room h2 b{color:var(--fg);font-weight:600}
+.desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.desk{position:relative;background:var(--desk);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;transition:border-color .3s,box-shadow .3s}
+.desk .hd{display:flex;gap:10px;align-items:center}
+.av{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.95rem;color:#0d1117;position:relative}
+.av::after{content:"";position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;background:var(--mut);border:2px solid var(--desk)}
+.desk.buy .av::after{background:var(--buy)} .desk.sell .av::after{background:var(--sell)} .desk.idle .av::after{background:#4b5566}
+.who{min-width:0}
+.who b{display:block;font-size:.95rem}
+.who small{display:block;color:var(--mut);font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{margin-left:auto;font-family:var(--mono);font-size:.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--mut);flex:none}
+.st{margin-top:8px;font-size:.78rem;font-family:var(--mono);min-height:2.4em;color:var(--mut);line-height:1.2em}
+.desk.buy{border-color:color-mix(in srgb,var(--buy) 55%,var(--line))} .desk.sell{border-color:color-mix(in srgb,var(--sell) 55%,var(--line))}
+.desk.buy .st b{color:var(--buy)} .desk.sell .st b{color:var(--sell)}
+.ft{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.72rem;color:var(--mut);border-top:1px dashed var(--line);padding-top:6px;margin-top:6px;font-variant-numeric:tabular-nums}
+.pop{position:absolute;right:10px;top:8px;font-family:var(--mono);font-weight:600;font-size:.85rem;pointer-events:none;animation:pop 1.6s ease-out forwards}
+@keyframes pop{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-26px)}}
+.flash-w{box-shadow:0 0 0 2px var(--buy)} .flash-l{box-shadow:0 0 0 2px var(--sell)}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.boss{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.boss .hd{display:flex;gap:10px;align-items:center}
+.boss .msg{margin-top:8px;font-size:.8rem;line-height:1.35;min-height:3.9em}
+.sev{display:inline-block;font-size:.65rem;font-weight:600;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em}
+.sev.ok{background:color-mix(in srgb,var(--buy) 22%,transparent);color:var(--buy)}
+.sev.at{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}
+.sev.al{background:color-mix(in srgb,var(--sell) 22%,transparent);color:var(--sell)}
+aside{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0;align-self:start;position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px)}
+aside h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:var(--mut);margin-bottom:8px}
+#eq{width:100%;height:90px;display:block}
+#feed{list-style:none;margin:10px 0 0;padding:0;font-family:var(--mono);font-size:.72rem;max-height:62vh;overflow:auto}
+#feed li{padding:5px 0;border-bottom:1px solid var(--line);line-height:1.35}
+#feed time{color:var(--mut);margin-right:6px}
+.note{color:var(--mut);font-size:.72rem;margin-top:14px;line-height:1.4}
+@media (prefers-reduced-motion:reduce){.pop{animation:none;opacity:0}.bar i,.desk{transition:none}}
+
+.modes{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.modes button{border:0;border-radius:0;background:var(--desk);color:var(--mut)}
+.modes button[aria-pressed="true"]{background:var(--gold);color:#1b1407}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;color:var(--mut);font-family:var(--mono)}
+.live i{width:8px;height:8px;border-radius:50%;background:#4b5566}
+.live.on i{background:var(--buy);box-shadow:0 0 0 3px color-mix(in srgb,var(--buy) 30%,transparent)}
+.floor{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#cv{display:block;width:100%;height:auto;image-rendering:pixelated;cursor:pointer}
+.tip{position:absolute;left:12px;bottom:12px;max-width:min(320px,calc(100% - 24px));background:color-mix(in srgb,var(--bg) 92%,transparent);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.8rem;line-height:1.4}
+.tip b{font-size:.95rem}
+.tip .x{position:absolute;right:6px;top:4px;background:none;border:0;color:var(--mut);font-size:1rem;cursor:pointer}
+.banner{margin-top:10px;font-size:.8rem;color:var(--mut);background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:8px 12px}
+
+.face{flex:none;width:44px;height:44px;border-radius:50%;overflow:hidden;position:relative;background:var(--line)}
+.face svg{display:block;width:100%;height:100%}
+.face::after{content:"";position:absolute;right:1px;bottom:1px;width:11px;height:11px;border-radius:50%;background:#4b5566;border:2px solid var(--desk)}
+.desk.buy .face::after{background:var(--buy)} .desk.sell .face::after{background:var(--sell)}
+.meta{margin-top:8px;font-family:var(--mono);font-size:.72rem;color:var(--mut);display:grid;gap:4px}
+.meta .row{display:flex;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
+.mbar{height:6px;background:var(--line);border-radius:3px;position:relative;overflow:hidden}
+.mbar i{position:absolute;top:0;bottom:0;left:0;background:var(--buy);border-radius:3px}
+.mbar i.neg{background:var(--sell)}
+</style>
+
+<style>
+[hidden]{display:none!important}*{box-sizing:border-box}html,body{margin:0}body{font-size:14px;padding-top:max(16px,env(safe-area-inset-top,0px))}
+#login{max-width:340px;margin:12vh auto;display:grid;gap:10px}
+#login h1{font-size:1.8rem}#login h1 b{color:var(--gold)}
+#login input,#login button{font:inherit;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--desk);color:var(--fg)}
+#login button{background:var(--gold);color:#1b1407;font-weight:700;border-color:var(--gold);cursor:pointer}
+#erro{color:var(--sell);font-size:.85rem;min-height:1.2em}
+.sair{background:none;border:1px solid var(--line);color:var(--mut);border-radius:6px;padding:4px 10px;font:inherit;font-size:.75rem;cursor:pointer}
+</style></head><body>
+<div id="login" hidden><h1><b>LED</b> Invest</h1><p style="color:var(--mut);margin:0">Escritório ao vivo</p>
+<input id="em" type="email" placeholder="e-mail" autocomplete="username"><input id="pw" type="password" placeholder="senha" autocomplete="current-password">
+<button id="entrar" type="button">Entrar</button><div id="erro"></div></div>
+<div id="app" hidden>
+<header class="top">
+  <div class="brand"><h1><b>LED</b> Invest · Escritório</h1><p>Cada robô é um operador. Conta ao vivo.</p></div>
+  <div class="clock" id="clock">—<small>aguardando</small></div>
+  <div class="ctl"><span class="live" id="liveTag"><i></i><span id="liveTxt">conectando…</span></span><button class="sair" id="sair" type="button">Sair</button></div>
+</header>
+<section class="kpis">
+  <div class="kpi"><span>Saldo</span><strong id="kSaldo">—</strong><em id="kSaldoSub"></em></div>
+  <div class="kpi"><span>Hoje (fechado)</span><strong id="kHoje">—</strong><em id="kHojeSub"></em></div>
+  <div class="kpi"><span>Mês · meta <b id="kMeta" style="font-weight:inherit"></b></span><strong id="kMes">—</strong><div class="bar"><i id="kMesBar"></i></div></div>
+  <div class="kpi"><span>Queda do topo</span><strong id="kDD">—</strong><em id="kDDSub"></em></div>
+  <div class="kpi"><span>Sacado</span><strong id="kSac">—</strong><em id="kSacSub"></em></div>
+  <div class="kpi"><span>Em operação</span><strong id="kAbertas">—</strong><em id="kOps"></em></div>
+</section>
+<div class="main"><div>
+  <section class="room"><h2><b>Diretoria</b> acompanha a mesa</h2><div class="board" id="board"></div></section>
+  <section class="room"><h2><b>Mesa Ouro</b> LED Alpha Gold · XAUUSD</h2><div class="desks" id="mOuro"></div></section>
+  <section class="room"><h2><b>Mesa Global</b> LED Alpha Global · BTC, US100, GER40, USDJPY</h2><div class="desks" id="mGlobal"></div></section>
+  <p class="note">Dados enviados pelo MT5 da VPS a cada 3 s. Meta individual = metade da média mensal de cada robô no teste.</p>
+</div><aside><h2>Saldo</h2><canvas id="eq" width="600" height="180"></canvas><h2 style="margin-top:12px">Pregão</h2><ul id="feed"></ul></aside></div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="config.js"></script>
+<script>
+const AG=[{"n": "Dak M5", "p": "Rafa", "m": "Ouro", "s": "XAUUSD", "d": "Fimathe M5 pela manhã, take 3,5, com virada"}, {"n": "Dia M4", "p": "Bia", "m": "Ouro", "s": "XAUUSD", "d": "Fimathe M4 do dia inteiro, fecha 23:45"}, {"n": "PCM M1", "p": "Caio", "m": "Ouro", "s": "XAUUSD", "d": "Canal Fimathe M1, take 2,1, até 3 por dia"}, {"n": "Sete H1", "p": "Lia", "m": "Ouro", "s": "XAUUSD", "d": "Maioria das 7 velas H1, entra às 08:00"}, {"n": "Engolfo H4", "p": "Otto", "m": "Ouro", "s": "XAUUSD", "d": "Engolfo H4 a favor da MME200, alvo 2R"}, {"n": "Super H1", "p": "Nina", "m": "Ouro", "s": "XAUUSD", "d": "Virada do Supertrend H1"}, {"n": "Dia Direcional", "p": "Theo", "m": "Ouro", "s": "XAUUSD", "d": "Fecho 0,8 ATR longe da abertura, 13h–20h"}, {"n": "Cruz H1", "p": "Iara", "m": "Ouro", "s": "XAUUSD", "d": "Cruzamento de médias H1"}, {"n": "NY Venda", "p": "Duda", "m": "Ouro", "s": "XAUUSD", "d": "Venda na abertura de Nova York"}, {"n": "FVG M15", "p": "Luna", "m": "Ouro", "s": "XAUUSD", "d": "Gap FVG contra a tendência, ordem stop no meio, alvo 4R"}, {"n": "OB H1", "p": "Enzo", "m": "Ouro", "s": "XAUUSD", "d": "Order block invertido H1, trailing 3 ATR"}, {"n": "Donch20d", "p": "Vera", "m": "Ouro", "s": "XAUUSD", "d": "Rompimento da máx/mín de 20 dias, trailing 3 ATR"}, {"n": "BTC A", "p": "Igor", "m": "Global", "s": "BTCUSD", "d": "Fimathe BTC M30, alvo 4"}, {"n": "Elefante BTC", "p": "Beto", "m": "Global", "s": "BTCUSD", "d": "Barra-elefante de alta no M5"}, {"n": "US100 Fimathe", "p": "Malu", "m": "Global", "s": "US100", "d": "Fimathe US100 M30 às 14h"}, {"n": "Elefante US100", "p": "Rita", "m": "Global", "s": "US100", "d": "Barra-elefante de alta no M5"}, {"n": "GER40 Fimathe", "p": "Hugo", "m": "Global", "s": "GER40", "d": "Fimathe GER40 M30 às 04h"}, {"n": "OCO GER40", "p": "Tati", "m": "Global", "s": "GER40", "d": "OCO M15 no GER40"}, {"n": "Sete JPY", "p": "Davi", "m": "Global", "s": "USDJPY", "d": "Maioria de 8 velas H1 desde 03h"}, {"n": "Super JPY", "p": "Sofia", "m": "Global", "s": "USDJPY", "d": "Supertrend H1 no USDJPY"}, {"n": "SAR JPY", "p": "Gael", "m": "Global", "s": "USDJPY", "d": "Parabolic SAR H4"}, {"n": "Cruz JPY", "p": "Leo", "m": "Global", "s": "USDJPY", "d": "Médias 9x21 H1, só compra"}];
+const META={"BTC A": 0.25, "Cruz H1": 0.19, "Cruz JPY": 0.21, "Dak M5": 0.26, "Dia Direcional": 0.5, "Dia M4": 0.0, "Donch20d": 0.26, "Elefante BTC": 0.12, "Elefante US100": 0.14, "Engolfo H4": 0.21, "FVG M15": 0.35, "GER40 Fimathe": 0.2, "NY Venda": 0.17, "OB H1": 0.12, "OCO GER40": 0.01, "PCM M1": 0.58, "SAR JPY": 0.23, "Sete H1": 0.26, "Sete JPY": 0.63, "Super H1": 0.05, "Super JPY": 0.36, "US100 Fimathe": 0.37};const METAT=Object.values(META).reduce((a,b)=>a+b,0);
+</script>
+<script src="app.js"></script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');</script>
+</body></html>

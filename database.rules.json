@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "led": {
+      ".read": "auth != null && auth.token.email == 'ladak@ledinvest.org'",
+      ".write": "auth != null && auth.token.email == 'ladak@ledinvest.org'"
+    }
+  }
+}
