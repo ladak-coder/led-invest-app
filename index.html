@@ -152,6 +152,17 @@ aside h2{color:var(--navy)}
 .pc em{display:block;font-style:normal;font-family:var(--mono);font-size:.78rem;color:var(--mut);margin-top:2px}
 .pc .bar{margin-top:8px}
 .pc.ok{border-color:var(--buy)}.pc.neg{border-color:var(--sell)}
+.labres{background:#fff;border:1px solid var(--line);border-radius:6px;margin-top:10px;padding:10px 12px}
+.labhd{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+.ap{border-top:1px solid var(--line);padding:8px 0}
+.ap summary{cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:baseline;list-style:none}
+.ap summary::-webkit-details-marker{display:none}
+.ap summary b{font-size:.85rem}
+.ap summary span{font-family:var(--mono);font-size:.78rem;white-space:nowrap}
+.ap .det{font-size:.78rem;color:var(--mut);margin-top:6px;line-height:1.45}
+.ap .det table{border-collapse:collapse;font-family:var(--mono);font-size:.72rem;margin-top:4px}
+.ap .det td{padding:2px 8px 2px 0;font-variant-numeric:tabular-nums}
+.boss .nums{font-family:var(--mono);font-size:.72rem;color:var(--mut);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
 </style>
 <meta name="theme-color" content="#0f1f3d">
 </head><body>
@@ -177,6 +188,10 @@ aside h2{color:var(--navy)}
 </section>
 <div class="main"><div>
   <section class="room"><h2><b>Diretoria</b> acompanha a mesa</h2><div class="board" id="board"></div></section>
+  <section class="room" id="labRoom"><h2><b>Laboratório</b> pesquisa de novos setups · <span id="labAt">—</span></h2>
+    <div class="board" id="labPes"></div>
+    <div class="labres"><div class="labhd"><b id="labTit">Setups aprovados</b><span id="labRegra" class="note" style="margin:0"></span></div><div id="labAp"></div></div>
+  </section>
   <section class="room"><h2><b>Mesa Ouro</b> LED Alpha Gold · XAUUSD</h2><div class="desks" id="mOuro"></div></section>
   <section class="room"><h2><b>Mesa Global</b> LED Alpha Global · BTC, US100, GER40, USDJPY</h2><div class="desks" id="mGlobal"></div></section>
   <p class="note">Dados enviados pelo MT5 da VPS a cada 3 s. Meta individual = metade da média mensal de cada robô no teste.</p>

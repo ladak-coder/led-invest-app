@@ -115,6 +115,7 @@ auth.onAuthStateChanged(u => {
   const a = r1.on('value', s => { R = s.val(); render(); }, e => { $('liveTxt').textContent = 'sem permissão: ' + e.code; });
   const b = r2.on('value', s => { Hh = s.val(); renderHist(); render(); });
   subs.push(() => r1.off('value', a), () => r2.off('value', b));
+  labChave(db).then(k => { LABK = k; lab(); }).catch(e => { $('labAt').textContent = 'sem acesso ao laboratório'; });
 });
 setInterval(render, 5000);
 $('entrar').onclick = async () => {
@@ -124,3 +125,37 @@ $('entrar').onclick = async () => {
 };
 $('pw').addEventListener('keydown', e => { if (e.key === 'Enter') $('entrar').click(); });
 $('sair').onclick = () => auth.signOut();
+
+// ---------- Laboratório (pesquisa noturna; arquivo cifrado lab.enc, chave no Firebase) ----------
+let LABK = null;
+const b64 = u => btoa(String.fromCharCode(...new Uint8Array(u))), unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+const RSA = { name: 'RSA-OAEP', hash: 'SHA-256' };
+// chave do laboratório: criada aqui no seu aparelho no primeiro acesso; a privada fica só no Firebase (só você lê), a pública vai para o laboratório
+async function labChave(db) {
+  const s = await db.ref('led/lab_priv').once('value');
+  if (s.val()) return crypto.subtle.importKey('pkcs8', unb64(s.val()), RSA, false, ['decrypt']);
+  const kp = await crypto.subtle.generateKey({ ...RSA, modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]) }, true, ['encrypt', 'decrypt']);
+  await db.ref('led/lab_pub').set(b64(await crypto.subtle.exportKey('spki', kp.publicKey)));
+  await db.ref('led/lab_priv').set(b64(await crypto.subtle.exportKey('pkcs8', kp.privateKey)));
+  return kp.privateKey;
+}
+async function lab() {
+  if (!LABK) return;
+  try {
+    const r = await fetch('lab.enc?' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw 0;
+    const raw = unb64((await r.text()).trim());
+    const kraw = await crypto.subtle.decrypt(RSA, LABK, raw.slice(0, 256));
+    const key = await crypto.subtle.importKey('raw', kraw, 'AES-GCM', false, ['decrypt']);
+    const J = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(256, 268) }, key, raw.slice(268))));
+    renderLab(J);
+  } catch (e) { $('labAt').textContent = 'aguardando a primeira noite de pesquisa'; }
+}
+setInterval(lab, 10 * 60000);
+const fp = v => (v >= 0 ? '+' : '') + Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+function renderLab(J) {
+  $('labAt').textContent = `${J.noites} noites · ${Number(J.testados).toLocaleString('pt-BR')} ideias testadas · atualizado ${J.atualizado}`;
+  $('labPes').innerHTML = J.pesquisadores.map((p, k) => `<article class="boss" style="border-left-color:${p.cor}"><div class="hd"><div class="face">${face(311 + k * 53, p.cor, p.hoje_aprovados > 0 ? 1 : 0)}</div><div class="who"><b>${p.nome}</b><small>${p.cargo}</small></div><span class="sev ${p.ativos.length ? (p.hoje_aprovados ? 'ok' : 'at') : 'al'}">${p.ativos.length ? (p.hoje_aprovados ? p.hoje_aprovados + ' novo' + (p.hoje_aprovados > 1 ? 's' : '') : 'pesquisando') : 'sem dados'}</span></div><div class="msg">${p.ativos.length ? 'Última ideia: ' + (p.ultima || '—') : p.status}</div><div class="nums"><span>hoje ${p.hoje_testados} testes</span><span>total ${Number(p.testados).toLocaleString('pt-BR')}</span><span>aprovados ${p.aprovados}</span></div></article>`).join('');
+  $('labRegra').textContent = J.regra;
+  $('labTit').textContent = `Setups aprovados (${J.aprovados.length}) — aguardando sua decisão; nada entra no robô sem você`;
+  $('labAp').innerHTML = J.aprovados.length ? J.aprovados.map(a => { const m = a.m; return `<details class="ap"><summary><b>${a.desc}</b><span class="pos">${fp(m.pts_mes)} pts/mês</span></summary><div class="det">${a.quem} · ${a.data.split('-').reverse().join('/')} · ${m.n} operações (${String(m.ops_mes).replace('.', ',')}/mês) · acerto ${String(m.acerto).replace('.', ',')}% · fator de lucro ${String(m.pf).replace('.', ',')} · média ${fp(m.media)} pts/op · queda máx ${fp(-m.dd)} pts<br>2022-2024: ${fp(m.is_pts)} pts (FL ${String(m.is_pf).replace('.', ',')}) · 2025-2026: ${fp(m.oos_pts)} pts (FL ${String(m.oos_pf).replace('.', ',')}) · entrada aleatória igual: FL ${String(m.base_pf).replace('.', ',')}, ${fp(m.base_media)} pts/op · vizinhos lucrando ${a.vizinhos}<table><tr>${Object.keys(m.anos).map(y => `<td>${y}</td>`).join('')}</tr><tr>${Object.values(m.anos).map(v => `<td class="${v >= 0 ? 'pos' : 'neg'}">${fp(v)}</td>`).join('')}</tr></table></div></details>`; }).join('') : '<p class="note">Nenhum aprovado ainda.</p>';
+}
