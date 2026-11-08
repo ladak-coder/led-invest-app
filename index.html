@@ -163,6 +163,23 @@ aside h2{color:var(--navy)}
 .ap .det table{border-collapse:collapse;font-family:var(--mono);font-size:.72rem;margin-top:4px}
 .ap .det td{padding:2px 8px 2px 0;font-variant-numeric:tabular-nums}
 .boss .nums{font-family:var(--mono);font-size:.72rem;color:var(--mut);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
+.tw{overflow-x:auto;margin-top:8px}
+.tw table{border-collapse:collapse;font-family:var(--mono);font-size:.72rem;width:100%;min-width:560px}
+.tw th,.tw td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tw th:first-child,.tw td:first-child{text-align:left}
+.tw th{color:var(--mut);font-weight:600}
+.labres summary{cursor:pointer}
+.btn{font:inherit;font-size:.8rem;background:var(--gold);color:#111;border:0;border-radius:6px;padding:6px 12px;font-weight:700;cursor:pointer;margin-top:8px}
+#rel{display:none}
+@media print{body>*:not(#rel){display:none!important}#rel{display:block!important}body{border:0!important;box-shadow:none!important;padding:0!important;background:#fff!important}}
+#rel{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:#111;max-width:760px;margin:0 auto}
+#rel .cab{background:#0f1f3d;color:#fff;padding:18px 22px;border-bottom:4px solid #c9a84c;display:flex;align-items:center;gap:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#rel .cab img{height:46px}#rel h1{font-size:1.1rem;letter-spacing:.12em;text-transform:uppercase;color:#c9a84c;margin:0}
+#rel h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.1em;border-bottom:2px solid #c9a84c;padding-bottom:4px;margin:18px 0 8px}
+#rel .k{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#rel .k div{border:1px solid #e2e5ea;padding:8px 10px}
+#rel .k span{display:block;font-size:.65rem;color:#6b7280;text-transform:uppercase}#rel .k b{font-size:1.05rem}
+#rel table{width:100%;border-collapse:collapse;font-size:.75rem}#rel td,#rel th{border-bottom:1px solid #e2e5ea;padding:4px 6px;text-align:right}#rel td:first-child,#rel th:first-child{text-align:left}
+#rel img.cv{width:100%;border:1px solid #e2e5ea}#rel .disc{font-size:.65rem;color:#6b7280;margin-top:16px;line-height:1.4}
 </style>
 <meta name="theme-color" content="#0f1f3d">
 </head><body>
@@ -188,6 +205,10 @@ aside h2{color:var(--navy)}
 </section>
 <div class="main"><div>
   <section class="room"><h2><b>Diretoria</b> acompanha a mesa</h2><div class="board" id="board"></div></section>
+  <section class="room"><h2><b>Equipe de apoio</b> carteira, execução, operações, macro, investidores e controladoria</h2><div class="board" id="staff"></div>
+    <details class="labres" id="detPort"><summary><b>Carteira: operador × teste</b></summary><div id="portTab" class="tw"></div></details>
+    <details class="labres" id="detCtl"><summary><b>Controladoria: resultado por mês</b></summary><div id="ctlTab" class="tw"></div></details>
+  </section>
   <section class="room" id="labRoom"><h2><b>Laboratório</b> pesquisa de novos setups · <span id="labAt">—</span></h2>
     <div class="board" id="labPes"></div>
     <div class="labres"><div class="labhd"><b id="labTit">Setups aprovados</b><span id="labRegra" class="note" style="margin:0"></span></div><div id="labAp"></div></div>
@@ -197,6 +218,7 @@ aside h2{color:var(--navy)}
   <p class="note">Dados enviados pelo MT5 da VPS a cada 3 s. Meta individual = metade da média mensal de cada robô no teste.</p>
 </div><aside><h2>Resultado desde 04/11 (US$)</h2><canvas id="eq" width="600" height="180"></canvas><h2 style="margin-top:12px">Pregão</h2><ul id="feed"></ul></aside></div>
 </div>
+<div id="rel"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>

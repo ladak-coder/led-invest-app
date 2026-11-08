@@ -86,6 +86,7 @@ function render() {
   $('b_tes_sev').className = 'sev ' + (falta > 0 ? 'at' : 'ok'); $('b_tes_sev').textContent = falta > 0 ? 'salário a sacar' : 'em dia';
   $('b_tes').innerHTML = `Salário do mês: 1% do saldo do início do mês = ${usd(sal)}${falta > 0 ? ` (falta sacar ${usd(falta)})` : ' (já sacado)'}. Extra no fim do trimestre: 50% do lucro do trimestre. Total sacado: ${usd(Hh.sacado_total)}.`;
   AG.forEach((_, i) => upDesk(i));
+  try { renderStaff(vivo, idade, eq, bal); } catch (e) { console.log(e); }
 }
 function renderHist() {
   if (!Hh) return; const f = Hh.feed ? Object.values(Hh.feed) : [];
@@ -114,7 +115,8 @@ auth.onAuthStateChanged(u => {
   const r1 = db.ref('led/rapido'), r2 = db.ref('led/historico');
   const a = r1.on('value', s => { R = s.val(); render(); }, e => { $('liveTxt').textContent = 'sem permissão: ' + e.code; });
   const b = r2.on('value', s => { Hh = s.val(); renderHist(); render(); });
-  subs.push(() => r1.off('value', a), () => r2.off('value', b));
+  const r3 = db.ref('led/agenda'); const c3 = r3.on('value', s => { AGD = s.val(); render(); });
+  subs.push(() => r1.off('value', a), () => r2.off('value', b), () => r3.off('value', c3));
   labChave(db).then(k => { LABK = k; lab(); }).catch(e => { $('labAt').textContent = 'sem acesso ao laboratório'; });
 });
 setInterval(render, 5000);
@@ -154,8 +156,83 @@ setInterval(lab, 10 * 60000);
 const fp = v => (v >= 0 ? '+' : '') + Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
 function renderLab(J) {
   $('labAt').textContent = `${J.noites} noites · ${Number(J.testados).toLocaleString('pt-BR')} ideias testadas · atualizado ${J.atualizado}`;
-  $('labPes').innerHTML = J.pesquisadores.map((p, k) => `<article class="boss" style="border-left-color:${p.cor}"><div class="hd"><div class="face">${face(311 + k * 53, p.cor, p.hoje_aprovados > 0 ? 1 : 0)}</div><div class="who"><b>${p.nome}</b><small>${p.cargo}</small></div><span class="sev ${p.ativos.length ? (p.hoje_aprovados ? 'ok' : 'at') : 'al'}">${p.ativos.length ? (p.hoje_aprovados ? p.hoje_aprovados + ' novo' + (p.hoje_aprovados > 1 ? 's' : '') : 'pesquisando') : 'sem dados'}</span></div><div class="msg">${p.ativos.length ? 'Última ideia: ' + (p.ultima || '—') : p.status}</div><div class="nums"><span>hoje ${p.hoje_testados} testes</span><span>total ${Number(p.testados).toLocaleString('pt-BR')}</span><span>aprovados ${p.aprovados}</span></div></article>`).join('');
+  $('labPes').innerHTML = J.pesquisadores.map((p, k) => `<article class="boss" style="border-left-color:${p.cor}"><div class="hd"><div class="face">${face(311 + k * 53, p.cor, p.hoje_aprovados > 0 ? 1 : 0)}</div><div class="who"><b>${p.nome}</b><small>${p.cargo}</small></div><span class="sev ${p.nome === 'Sérgio' ? 'ok' : p.ativos.length ? (p.hoje_aprovados ? 'ok' : 'at') : 'al'}">${p.nome === 'Sérgio' ? (J.validados || 0) + ' validados' : p.ativos.length ? (p.hoje_aprovados ? p.hoje_aprovados + ' novo' + (p.hoje_aprovados > 1 ? 's' : '') : 'pesquisando') : 'sem dados'}</span></div><div class="msg">${p.ativos.length ? 'Última ideia: ' + (p.ultima || '—') : p.status}</div>${p.nome === 'Sérgio' ? '' : `<div class="nums"><span>hoje ${p.hoje_testados} testes</span><span>total ${Number(p.testados).toLocaleString('pt-BR')}</span><span>aprovados ${p.aprovados}</span></div>`}</article>`).join('');
   $('labRegra').textContent = J.regra;
   $('labTit').textContent = `Setups aprovados (${J.aprovados.length}) — aguardando sua decisão; nada entra no robô sem você`;
-  $('labAp').innerHTML = J.aprovados.length ? J.aprovados.map(a => { const m = a.m; return `<details class="ap"><summary><b>${a.desc}</b><span class="pos">${fp(m.pts_mes)} pts/mês</span></summary><div class="det">${a.quem} · ${a.data.split('-').reverse().join('/')} · ${m.n} operações (${String(m.ops_mes).replace('.', ',')}/mês) · acerto ${String(m.acerto).replace('.', ',')}% · fator de lucro ${String(m.pf).replace('.', ',')} · média ${fp(m.media)} pts/op · queda máx ${fp(-m.dd)} pts<br>2022-2024: ${fp(m.is_pts)} pts (FL ${String(m.is_pf).replace('.', ',')}) · 2025-2026: ${fp(m.oos_pts)} pts (FL ${String(m.oos_pf).replace('.', ',')}) · entrada aleatória igual: FL ${String(m.base_pf).replace('.', ',')}, ${fp(m.base_media)} pts/op · vizinhos lucrando ${a.vizinhos}<table><tr>${Object.keys(m.anos).map(y => `<td>${y}</td>`).join('')}</tr><tr>${Object.values(m.anos).map(v => `<td class="${v >= 0 ? 'pos' : 'neg'}">${fp(v)}</td>`).join('')}</tr></table></div></details>`; }).join('') : '<p class="note">Nenhum aprovado ainda.</p>';
+  $('labAp').innerHTML = J.aprovados.length ? J.aprovados.map(a => { const m = a.m; return `<details class="ap"><summary><b>${a.valid && a.valid.ok ? '✅ ' : ''}${a.desc}</b><span class="pos">${fp(m.pts_mes)} pts/mês</span></summary><div class="det">${a.quem} · ${a.data.split('-').reverse().join('/')} · ${m.n} operações (${String(m.ops_mes).replace('.', ',')}/mês) · acerto ${String(m.acerto).replace('.', ',')}% · fator de lucro ${String(m.pf).replace('.', ',')} · média ${fp(m.media)} pts/op · queda máx ${fp(-m.dd)} pts<br>2022-2024: ${fp(m.is_pts)} pts (FL ${String(m.is_pf).replace('.', ',')}) · 2025-2026: ${fp(m.oos_pts)} pts (FL ${String(m.oos_pf).replace('.', ',')}) · entrada aleatória igual: FL ${String(m.base_pf).replace('.', ',')}, ${fp(m.base_media)} pts/op · vizinhos lucrando ${a.vizinhos}${a.valid ? `<br><b class="${a.valid.ok ? 'pos' : 'neg'}">Validador: ${a.valid.ok ? 'APROVADO' : 'REPROVADO'}</b> · custo dobrado FL ${String(a.valid.custo2_pf).replace('.', ',')} (${fp(a.valid.custo2_pts)} pts) · queda Monte Carlo 95% ${fp(-a.valid.dd95)} pts · últimos 6 meses ${fp(a.valid.ult6m)} pts (${a.valid.ult6m_n} op)` : ''}<table><tr>${Object.keys(m.anos).map(y => `<td>${y}</td>`).join('')}</tr><tr>${Object.values(m.anos).map(v => `<td class="${v >= 0 ? 'pos' : 'neg'}">${fp(v)}</td>`).join('')}</tr></table></div></details>`; }).join('') : '<p class="note">Nenhum aprovado ainda.</p>';
 }
+
+// ---------- Equipe de apoio ----------
+let AGD = null, BASE = null, LABJ = null;
+fetch('base_teste.json').then(r => r.json()).then(j => { BASE = j; render(); }).catch(() => { });
+const STAFF = [
+  { id: 'port', p: 'Fernando', c: 'Gestor de Portfólio', cor: '#2f5d9e' },
+  { id: 'exe', p: 'Clara', c: 'Execução', cor: '#8e44ad' },
+  { id: 'ops', p: 'Rodrigo', c: 'Operações / TI', cor: '#16a085' },
+  { id: 'mac', p: 'Lúcia', c: 'Macro e agenda', cor: '#c0392b' },
+  { id: 'ri', p: 'Beatriz', c: 'Relações com Investidores', cor: '#c9a84c' },
+  { id: 'ctl', p: 'Antônio', c: 'Controladoria', cor: '#34495e' }];
+$('staff').innerHTML = STAFF.map((b, k) => `<article class="boss" style="border-left-color:${b.cor}"><div class="hd"><div class="face">${face(907 + k * 61, b.cor, 0)}</div><div class="who"><b>${b.p}</b><small>${b.c}</small></div><span class="sev ok" id="s_${b.id}_sev">ok</span></div><div class="msg" id="s_${b.id}">—</div>${b.id === 'ri' ? '<button class="btn" id="btnRel" type="button">Gerar relatório do mês (PDF)</button>' : ''}</article>`).join('');
+function sev(id, cls, txt) { const e = $('s_' + id + '_sev'); e.className = 'sev ' + cls; e.textContent = txt; }
+const dias = ms => (Date.now() - ms) / 864e5;
+function renderStaff(vivo, idade, eq, bal) {
+  const A = (Hh && Hh.agentes) || {}, B = (BASE && BASE.base) || {};
+  // Fernando: operador ao vivo × teste
+  const fora = [], linhas = [];
+  AG.forEach(g => {
+    const a = A[g.n] || {}, b = B[g.n]; if (!b) return; const st = [];
+    if ((a.seq || 0) >= b.seq_max) st.push(`${a.seq} perdas seguidas (teste: máx ${b.seq_max})`);
+    if ((a.mes_pct || 0) < b.mes_pior) st.push(`mês ${fmt(a.mes_pct)}% abaixo do pior mês do teste (${fmt(b.mes_pior)}%)`);
+    if (a.ult_ms && dias(a.ult_ms) > Math.max(b.gap_max, 3) * 1.4) st.push(`sem operar há ${Math.round(dias(a.ult_ms))} dias (teste: máx ${b.gap_max})`);
+    if (b.mes_med < 0) st.push('resultado médio negativo no teste');
+    if (st.length) fora.push(`<b>${g.p}</b> (${g.n}): ${st.join('; ')}`);
+    linhas.push(`<tr><td>${g.p} · ${g.n}</td><td>${a.n || 0}</td><td>${fmt(a.acerto || 0, 0)}% / ${fmt(b.acerto, 0)}%</td><td class="${(a.mes_pct || 0) >= 0 ? 'pos' : 'neg'}">${sg(a.mes_pct || 0)}%</td><td>${fmt(b.mes_med)}% · pior ${fmt(b.mes_pior)}%</td><td>${a.seq || 0} / ${b.seq_max}</td><td>${fmt(b.peso)}x</td><td class="${st.length ? 'neg' : 'pos'}">${st.length ? 'revisar' : 'ok'}</td></tr>`);
+  });
+  sev('port', fora.length ? 'at' : 'ok', fora.length ? fora.length + ' para revisar' : 'carteira ok');
+  const cp = BASE ? BASE.corr_top.slice(0, 3).map(c => `${c[1]} × ${c[2]} (${fmt(c[0])})`).join(', ') : '';
+  $('s_port').innerHTML = (fora.length ? fora.slice(0, 3).join('<br>') + (fora.length > 3 ? `<br>+${fora.length - 3} na tabela.` : '') : 'Todos os operadores dentro do padrão do teste.') + (cp ? `<br><small>Mais parecidos no teste: ${cp}. Correlação média ${fmt(BASE.corr_med)}.</small>` : '');
+  $('portTab').innerHTML = `<table><tr><th>Operador</th><th>Op.</th><th>Acerto real / teste</th><th>Mês</th><th>Teste: mês médio</th><th>Perdas seguidas / máx teste</th><th>Peso sugerido</th><th></th></tr>${linhas.join('')}</table><p class="note">Peso sugerido = risco relativo pelo inverso da oscilação mensal no teste (1,00x = média). Só sugestão: nada é alterado nos robôs.</p>`;
+  // Clara: execução
+  const sp = R.spreads || {}, sps = Object.entries(sp).map(([k, v]) => `${k} ${v}`).join(' · ');
+  const sl = AG.map(g => [g, A[g.n] || {}]).filter(x => (x[1].slip_n || 0) > 0).sort((x, y) => y[1].slip - x[1].slip);
+  const pior = sl.slice(0, 3).map(x => `${x[0].p} ${sg(x[1].slip)} pts (${x[1].slip_n})`).join(', ');
+  const ping = R.ping || 0; sev('exe', ping > 150 || (sl[0] && sl[0][1].slip > 30) ? 'at' : 'ok', ping > 150 ? 'ping alto' : 'ok');
+  $('s_exe').innerHTML = `Ping VPS→corretora: <b>${ping} ms</b>${ping > 150 ? ' (alto: ordens a mercado podem escorregar)' : ''}.<br>Spread agora (pontos): ${sps || '—'}.<br>Slippage médio em stops/alvos/pendentes: ${pior || 'sem dados ainda'}.`;
+  // Rodrigo: operações / TI
+  const al = []; if (!vivo) al.push(`VPS sem sinal há ${Math.round(idade / 60)} min`); if (R.conectado === 0) al.push('MT5 desconectado da corretora'); if (R.algo === 0) al.push('Algo Trading DESLIGADO'); if (R.conta_ea === 0) al.push('conta não permite robôs');
+  const sumidos = AG.filter(g => { const a = A[g.n] || {}, b = B[g.n]; return b && a.ult_ms && dias(a.ult_ms) > Math.max(b.gap_max, 3) * 1.4; }).map(g => g.p);
+  sev('ops', al.length ? 'al' : sumidos.length ? 'at' : 'ok', al.length ? 'alerta' : sumidos.length ? 'atenção' : 'tudo no ar');
+  $('s_ops').innerHTML = `${al.length ? '<b>' + al.join(' · ') + '.</b><br>' : ''}VPS ${vivo ? 'online' : 'OFF'} · corretora ${R.conectado === 0 ? 'OFF' : 'conectada'} · Algo Trading ${R.algo === 0 ? 'OFF' : 'ligado'} · nível de margem ${fmt(R.nivel_margem || 0, 0)}%.${sumidos.length ? `<br>Operadores parados além do normal: ${sumidos.join(', ')}.` : ''}<br><small>Aviso no celular: o relatório manda push pelo app MT5 se cair a conexão ou desligar o Algo Trading.</small>`;
+  // Lúcia: agenda
+  const it = AGD && AGD.itens ? Object.values(AGD.itens).filter(x => x.ms > Date.now() - 36e5).sort((x, y) => x.ms - y.ms) : [];
+  const prox = it.filter(x => x.ms > Date.now()).slice(0, 4), logo = prox.find(x => x.ms - Date.now() < 3600e3);
+  sev('mac', logo ? 'al' : prox.some(x => x.ms - Date.now() < 864e5) ? 'at' : 'ok', logo ? 'notícia em <1h' : prox.some(x => x.ms - Date.now() < 864e5) ? 'notícia hoje' : 'calmo');
+  const dt = ms => new Date(ms).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  $('s_mac').innerHTML = prox.length ? 'Próximas de impacto alto (horário de Brasília):<br>' + prox.map(x => `<b>${dt(x.ms)}</b> ${x.moeda} ${x.nome}${x.prev ? ' · prev. ' + x.prev : ''}`).join('<br>') : 'Sem notícias de impacto alto nos próximos dias (USD, EUR, JPY).';
+  // Beatriz: RI
+  const P = Hh.periodos || {}, pm = P.mes || {}, pt = P.total || {};
+  sev('ri', 'ok', 'pronto');
+  $('s_ri').innerHTML = `Relatório do mês para clientes com a marca LED Invest: resultado do mês ${sg(pm.pl || 0)} (${sg(pm.base ? 100 * pm.pl / (pm.base - (pm.saque || 0)) : 0)}%), desde 04/11 ${sg(pt.pl || 0)}.`;
+  // Antônio: controladoria
+  const M = Hh.meses || {}, ks = Object.keys(M).sort(); let tot = 0, totR = 0;
+  const rows = ks.map(k => { const m = M[k]; tot += m.pl; const r = BRL ? m.pl * BRL : 0; totR += r; return `<tr><td>${k.slice(5)}/${k.slice(0, 4)}</td><td class="${m.pl >= 0 ? 'pos' : 'neg'}">${sg(m.pl)}</td><td>${BRL ? 'R$ ' + sg(r) : '—'}</td><td>${fmt(m.aporte)}</td><td>${fmt(m.saque)}</td></tr>`; }).join('');
+  sev('ctl', 'ok', 'em dia');
+  $('s_ctl').innerHTML = `Lucro realizado desde 04/11: <b>${usd(tot)}</b>${BRL ? ` ≈ R$ ${fmt(tot * BRL)} no dólar de hoje` : ''}. Aportes e saques fora do lucro. Tabela mês a mês abaixo.`;
+  $('ctlTab').innerHTML = `<table><tr><th>Mês</th><th>Lucro US$</th><th>Em reais (dólar de hoje)</th><th>Aportes US$</th><th>Saques US$</th></tr>${rows}<tr><td><b>Total</b></td><td><b>${sg(tot)}</b></td><td><b>${BRL ? 'R$ ' + sg(totR) : '—'}</b></td><td></td><td></td></tr></table><p class="note">Para o imposto: rendimentos de aplicações no exterior de pessoa física seguem a Lei 14.754/2023 (apuração anual). A conversão oficial usa a cotação do Banco Central da data de cada operação, não a de hoje. Confirme os valores com seu contador; não sou contador.</p>`;
+}
+function relatorio() {
+  const P = Hh.periodos || {}, pm = P.mes || {}, pt = P.total || {}, A = Hh.agentes || {};
+  const bm = (pm.base || 0) - (pm.saque || 0), bt = (pt.base || 0) - (pt.saque || 0);
+  const mesNome = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  const ops = AG.map(g => [g, A[g.n] || {}]).filter(x => x[1].n > 0).sort((x, y) => y[1].mes_usd - x[1].mes_usd);
+  const M = Hh.meses || {};
+  $('rel').innerHTML = `<div class="cab"><img src="logo-branco.png" alt="LED Invest"><div><h1>Relatório de desempenho</h1><div style="font-size:.8rem;color:#c8cfdb">${mesNome} · LED Alpha Gold + LED Alpha Global</div></div></div>
+  <h2>Resumo</h2><div class="k"><div><span>Resultado do mês</span><b>${usd(pm.pl || 0)}</b><br>${sg(bm > 0 ? 100 * pm.pl / bm : 0)}%</div><div><span>Desde o início (04/11/2026)</span><b>${usd(pt.pl || 0)}</b><br>${sg(bt > 0 ? 100 * pt.pl / bt : 0)}%</div><div><span>Maior queda desde o início</span><b>${fmt(100 * (Hh.dd_max || 0))}%</b></div>
+  <div><span>Operações fechadas</span><b>${Hh.fechadas || 0}</b></div><div><span>Robôs operando</span><b>${AG.length}</b></div><div><span>Gerado em</span><b>${new Date().toLocaleDateString('pt-BR')}</b></div></div>
+  <h2>Evolução do resultado (US$)</h2><img class="cv" src="${$('eq').toDataURL('image/png')}" alt="Curva de resultado">
+  <h2>Resultado por mês</h2><table><tr><th>Mês</th><th>Resultado US$</th></tr>${Object.keys(M).sort().map(k => `<tr><td>${k.slice(5)}/${k.slice(0, 4)}</td><td>${sg(M[k].pl)}</td></tr>`).join('')}</table>
+  <h2>Operadores no mês</h2><table><tr><th>Estratégia</th><th>Operações</th><th>Acerto</th><th>Mês US$</th></tr>${ops.map(x => `<tr><td>${x[0].n}</td><td>${x[1].n}</td><td>${fmt(x[1].acerto, 0)}%</td><td>${sg(x[1].mes_usd)}</td></tr>`).join('')}</table>
+  <p class="disc">LED Invest. Resultados passados não garantem resultados futuros. Operações em ouro, índices, moedas e criptoativos envolvem risco de perda do capital. Valores em dólares americanos, líquidos de custos de operação.</p>`;
+  setTimeout(() => window.print(), 300);
+}
+document.addEventListener('click', e => { if (e.target && e.target.id === 'btnRel') relatorio(); });
