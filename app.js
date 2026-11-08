@@ -59,12 +59,13 @@ function render() {
   const nomes = { dia: 'Hoje', semana: 'Semana', mes: 'Mês', total: 'Desde ' + dIni };
   const flutHoje = flut;
   $('per').innerHTML = ['dia', 'semana', 'mes', 'total'].map(k => {
-    const p = P[k] || { pl: 0, base: bal }; const pl = p.pl, pct = p.base > 0 ? 100 * pl / p.base : 0, mt = metas[k];
+    const p = P[k] || { pl: 0, base: bal }; const pl = p.pl, b = p.base - (p.saque || 0), pct = b > 0 ? 100 * pl / b : 0, mt = metas[k];
     const w = Math.max(0, Math.min(100, 100 * pct / mt));
     return `<div class="pc ${pct >= mt ? 'ok' : pct < 0 ? 'neg' : ''}"><span>${nomes[k]} · meta +${fmt(mt)}%</span><strong class="${pl >= 0 ? 'pos' : 'neg'}">${sg(pl)}</strong><em>${sg(pct)}%${BRL ? ' · R$ ' + sg(pl * BRL) : ''}</em><div class="bar"><i style="width:${w}%"></i></div></div>`;
   }).join('');
-  const m = P.mes && P.mes.base > 0 ? 100 * P.mes.pl / P.mes.base : 0;
-  const pico = Math.max(Hh.pico, bal), dd = 100 * Math.max(0, 1 - eq / pico), ddm = Math.max(100 * Hh.dd_max, dd);
+  const bm = P.mes ? P.mes.base - (P.mes.saque || 0) : 0, m = bm > 0 ? 100 * P.mes.pl / bm : 0;
+  const capB = Hh.cap_base || bal, plT = (Hh.pl_total || 0) + flut, picoPL = Math.max(Hh.pico_pl || 0, plT);
+  const dd = capB + picoPL > 0 ? 100 * Math.max(0, picoPL - plT) / (capB + picoPL) : 0, ddm = Math.max(100 * (Hh.dd_max || 0), dd);
   $('kDD').textContent = fmt(dd) + '%'; $('kDDSub').textContent = 'máx ' + fmt(ddm) + '%';
   $('kSac').textContent = usd(Hh.sacado_total); $('kSacSub').textContent = `este mês ${usd(Hh.sacado_mes)} · desde ${Hh.inicio || '04/11'}`;
   const pos = R.pos ? Object.values(R.pos) : []; $('kAbertas').textContent = pos.length; $('kOps').textContent = Hh.fechadas + ' fechadas';
