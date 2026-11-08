@@ -1,5 +1,5 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>LED Invest</title><meta name="theme-color" content="#0d1117"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<title>LED Invest</title><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -106,13 +106,54 @@ aside h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:va
 #login button{background:var(--gold);color:#1b1407;font-weight:700;border-color:var(--gold);cursor:pointer}
 #erro{color:var(--sell);font-size:.85rem;min-height:1.2em}
 .sair{background:none;border:1px solid var(--line);color:var(--mut);border-radius:6px;padding:4px 10px;font:inherit;font-size:.75rem;cursor:pointer}
-</style></head><body>
-<div id="login" hidden><h1><b>LED</b> Invest</h1><p style="color:var(--mut);margin:0">Escritório ao vivo</p>
+</style><style>
+/* Identidade LED Invest (relatórios): marinho, dourado, preto; fundo claro */
+:root{--bg:#f3f4f6;--panel:#ffffff;--desk:#ffffff;--line:#e2e5ea;--fg:#111827;--mut:#6b7280;--gold:#c9a84c;--navy:#0f1f3d;--glob:#2f5d9e;--buy:#1f9d61;--sell:#d14343;--warn:#b7791f;
+--disp:"Helvetica Neue",Helvetica,Arial,sans-serif;color-scheme:light}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--disp);border-left:12px solid var(--navy);box-shadow:inset 4px 0 0 var(--gold)}
+@media (max-width:600px){body{border-left-width:6px;box-shadow:inset 3px 0 0 var(--gold)}}
+.top{background:var(--navy);margin:calc(-1*max(16px,env(safe-area-inset-top,0px))) calc(-1*max(16px,env(safe-area-inset-right,0px))) 0 calc(-1*max(16px,env(safe-area-inset-left,0px)) + 4px);padding:14px max(16px,env(safe-area-inset-right,0px)) 14px 20px;border-bottom:3px solid var(--gold);align-items:center}
+.brand{display:flex;align-items:center;gap:16px}
+.brand img{height:44px;width:auto;display:block}
+.brand h1{font-size:1rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0}
+.brand p{color:#c8cfdb;font-size:.78rem;margin:.15rem 0 0}
+.clock{color:#fff}.clock small{color:#c8cfdb}
+.live{color:#c8cfdb}.sair{color:#c8cfdb;border-color:#3a4b6b}
+.kpis{margin-top:18px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:6px}
+.kpi span{color:var(--mut)}
+.kpi:first-child{border:1.5px solid var(--gold)}
+.room h2{background:#111;color:var(--gold);padding:7px 12px;border-radius:2px;letter-spacing:.1em;font-size:.72rem}
+.room h2 b{color:var(--gold)}.room h2::after{display:none}
+.room h2{font-weight:700}
+.desk{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 1px 2px rgba(15,31,61,.05)}
+.desk.buy{border-color:var(--buy)}.desk.sell{border-color:var(--sell)}
+.chip{color:var(--navy);border-color:var(--line);background:#f7f8fa}
+.boss{background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:6px}
+aside{background:#fff;border:1px solid var(--line);border-radius:6px}
+aside h2{color:var(--navy)}
+.mbar,.bar{background:#e8ebf0}.bar i{background:var(--gold)}
+.face::after{border-color:#fff}
+.av::after{border-color:#fff}
+.note{color:var(--mut)}
+#feed li{border-bottom-color:var(--line)}
+.sev.ok{background:#e6f5ee}.sev.at{background:#fbf3e3}.sev.al{background:#fbe9e9}
+#login{background:var(--navy);padding:28px;border-radius:8px;border-bottom:4px solid var(--gold);box-shadow:0 10px 30px rgba(15,31,61,.25)}
+#login img{height:64px;width:auto;margin:0 auto 6px;display:block}
+#login p{color:#c8cfdb!important;text-align:center}
+#login input{background:#fff;color:#111;border-color:#d0d5dd}
+#login button{background:var(--gold);border-color:var(--gold);color:#111}
+.flash-w{box-shadow:0 0 0 2px var(--buy)}.flash-l{box-shadow:0 0 0 2px var(--sell)}
+</style>
+<meta name="theme-color" content="#0f1f3d">
+</head><body>
+<div id="login" hidden><img src="logo-branco.png" alt="LED Invest"><p style="margin:0">Escritório ao vivo</p>
 <input id="em" type="email" placeholder="e-mail" autocomplete="username"><input id="pw" type="password" placeholder="senha" autocomplete="current-password">
 <button id="entrar" type="button">Entrar</button><div id="erro"></div></div>
 <div id="app" hidden>
 <header class="top">
-  <div class="brand"><h1><b>LED</b> Invest · Escritório</h1><p>Cada robô é um operador. Conta ao vivo.</p></div>
+  <div class="brand"><img src="logo-branco.png" alt="LED Invest"><div><h1>Escritório ao vivo</h1><p>Cada robô é um operador</p></div></div>
   <div class="clock" id="clock">—<small>aguardando</small></div>
   <div class="ctl"><span class="live" id="liveTag"><i></i><span id="liveTxt">conectando…</span></span><button class="sair" id="sair" type="button">Sair</button></div>
 </header>
