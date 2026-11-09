@@ -49,7 +49,7 @@ function render() {
   const idade = (Date.now() - (R.ms || 0)) / 1000;
   const vivo = idade < 20; $('liveTag').classList.toggle('on', vivo);
   $('liveTxt').textContent = vivo ? 'ao vivo' : `sem sinal há ${idade < 3600 ? Math.round(idade / 60) + ' min' : Math.round(idade / 3600) + ' h'}`;
-  $('clock').innerHTML = `${(R.servidor || '').slice(0, 16)}<small>servidor · Brasília ${R.local || ''} · conta ${R.login || ''}</small>`;
+  $('clock').innerHTML = `${(R.servidor || '').slice(0, 16)}<small>servidor · Brasília ${R.ms ? new Date(R.ms).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''} · conta ${R.login || ''}</small>`;
   const bal = R.saldo, flut = R.flutuante, eq = bal + flut;   // capital sem bônus/crédito da corretora
   $('kSaldo').textContent = usd(bal); $('kSaldoSub').innerHTML = `capital ${usd(eq)} · flutuante <span class="${flut >= 0 ? 'pos' : 'neg'}">${sg(flut)}</span>`;
   $('kXau').textContent = R.xau ? 'US$ ' + fmt(R.xau) : '—';
