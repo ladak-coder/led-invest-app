@@ -20,7 +20,7 @@ const BOSS = [{ id: 'risco', p: 'Helena', c: 'Gestora de Risco', cor: '#e0645c' 
 $('board').innerHTML = BOSS.map((b, k) => `<article class="boss"><div class="hd"><div class="face">${face(101 + k * 37, b.cor, 1)}</div><div class="who"><b>${b.p}</b><small>${b.c}</small></div><span class="sev ok" id="b_${b.id}_sev">ok</span></div><div class="msg" id="b_${b.id}">—</div></article>`).join('');
 
 
-let R = null, Hh = null, lastKey = null, BRL = null, BRL0 = null;
+let RANK = {}; let R = null, Hh = null, lastKey = null, BRL = null, BRL0 = null;
 async function dolar() { try { const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', { cache: 'no-store' }); const j = await r.json(); BRL = parseFloat(j.USDBRL.bid); render(); } catch (e) { } }
 // dólar do dia de início (04/11/2026): separa o lucro do trading do ganho/perda só pela variação do dólar
 async function dolar0() { try { const r = await fetch('https://economia.awesomeapi.com.br/json/daily/USD-BRL/?start_date=20261104&end_date=20261104'); const j = await r.json(); if (j && j[0]) { BRL0 = parseFloat(j[0].bid); render(); } } catch (e) { } }
@@ -55,7 +55,7 @@ function agData(i) {
 function upDesk(a) {
   const el = $('d' + a), A = AG[a], g = agData(a), pos = g.pos, mt = META[A.n] || 0;
   el.classList.remove('idle', 'buy', 'sell');
-  el.style.order = pos ? -1 : (g.n > 0 ? 0 : 1);   // quem está posicionado vem primeiro
+  el.style.order = pos ? -100000 + RANK[A.n] : (g.n > 0 ? 0 : 1);   // posicionados primeiro, do melhor para o pior resultado
   if (pos) { el.classList.add(pos.lado > 0 ? 'buy' : 'sell'); $('s' + a).innerHTML = `<b>${pos.lado > 0 ? 'COMPRADO' : 'VENDIDO'}</b> ${fmt(pos.lote)} @ ${fmt(pos.preco, A.s === 'USDJPY' ? 3 : 2)} · <span class="${pos.lucro >= 0 ? 'pos' : 'neg'}">${sg(pos.lucro)}</span><br>desde ${hBR(pos.desde)} (Brasília)`; }
   else { el.classList.add('idle'); $('s' + a).innerHTML = g.last == null ? 'procurando setup' : `procurando setup<br>última: <span class="${g.last >= 0 ? 'pos' : 'neg'}">${sg(g.last)}</span>`; }
   $('m' + a).innerHTML = `mês <span class="${g.musd >= 0 ? 'pos' : 'neg'}">${sg(g.musd)} (${sg(g.mpct)}%)</span>`;
@@ -115,6 +115,7 @@ function render() {
   const sal = Hh.inicio_mes * 0.01, falta = Math.max(0, sal - Hh.sacado_mes);
   $('b_tes_sev').className = 'sev ' + (falta > 0 ? 'at' : 'ok'); $('b_tes_sev').textContent = falta > 0 ? 'salário a sacar' : 'em dia';
   $('b_tes').innerHTML = `Salário do mês: 1% do saldo do início do mês = ${usd(sal)}${falta > 0 ? ` (falta sacar ${usd(falta)})` : ' (já sacado)'}. Extra no fim do trimestre: 50% do lucro do trimestre. Total sacado: ${usd(Hh.sacado_total)}.`;
+  RANK = {}; (R.pos ? Object.values(R.pos) : []).slice().sort((x, y) => (y.lucro || 0) - (x.lucro || 0)).forEach((q, k) => { if (RANK[q.a] == null) RANK[q.a] = k; });
   AG.forEach((_, i) => upDesk(i));
   // Operando agora: posições abertas no topo
   const ab = pos.slice().sort((x, y) => (y.lucro || 0) - (x.lucro || 0));

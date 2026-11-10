@@ -228,12 +228,14 @@ aside h2{color:var(--navy)}
     <details class="labres" id="detPort"><summary><b>Carteira: operador × teste</b></summary><div id="portTab" class="tw"></div></details>
     <details class="labres" id="detCtl"><summary><b>Controladoria: resultado por mês</b></summary><div id="ctlTab" class="tw"></div></details>
   </section>
-  <section class="room" id="labRoom"><h2><b>Laboratório</b> pesquisa de novos setups · <span id="labAt">—</span></h2>
-    <details class="labres" id="detPes"><summary><b>Pesquisadores</b> <span class="note" id="labPesRes" style="margin:0"></span></summary><div class="board" id="labPes" style="margin-top:10px"></div></details>
-    <details class="labres" id="detAp"><summary><b id="labTit">Setups aprovados</b></summary><p id="labRegra" class="note"></p><div id="labAp"></div></details>
-  </section>
   <p class="note">Dados enviados pelo MT5 da VPS a cada 3 s. Meta individual = metade da média mensal de cada robô no teste.</p>
 </div><aside><h2>Resultado desde 04/11 (US$)</h2><canvas id="eq" width="600" height="180"></canvas><h2 style="margin-top:12px">Pregão · horário de Brasília</h2><ul id="feed"></ul></aside></div>
+<section class="room" id="labRoom" style="margin-top:24px"><h2><b>Laboratório</b> pesquisa de novos setups · <span id="labAt">—</span></h2>
+  <details class="labres" id="detLab"><summary><b>Abrir o Laboratório</b> <span class="note" id="labPesRes" style="margin:0"></span></summary>
+    <div class="board" id="labPes" style="margin-top:10px"></div>
+    <details class="labres" id="detAp"><summary><b id="labTit">Setups aprovados</b></summary><p id="labRegra" class="note"></p><div id="labAp"></div></details>
+  </details>
+</section>
 </div>
 <div id="rel"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
