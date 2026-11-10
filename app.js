@@ -32,7 +32,8 @@ function offSrv() { const s = R && srvMs(R.servidor); return s && R.ms ? Math.ro
 function hBR(t, comData) {
   const off = offSrv(); if (off == null || t == null) return t ?? '';
   let ms = srvMs(t);
-  if (ms == null) { const m = String(t).match(/^(\d{2}):(\d{2})(?::(\d{2}))?/); if (!m) return t; const d = new Date(R.ms + off); ms = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), +m[1], +m[2], +(m[3] || 0)); comData = false; }
+  if (ms == null) { const m2 = String(t).match(/^(\d{2})[\/.](\d{2})[ ,]+(\d{2}):(\d{2})(?::(\d{2}))?/); if (m2) { const d = new Date(R.ms + off); ms = Date.UTC(d.getUTCFullYear(), m2[2] - 1, +m2[1], +m2[3], +m2[4], +(m2[5] || 0)); } }
+  if (ms == null) { const m = String(t).match(/(?:^|\s)(\d{2}):(\d{2})(?::(\d{2}))?/); if (!m) return t; const d = new Date(R.ms + off); ms = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), +m[1], +m[2], +(m[3] || 0)); comData = false; }
   return new Date(ms - off).toLocaleString('pt-BR', { ...BR, ...(comData === false ? {} : { day: '2-digit', month: '2-digit' }), hour: '2-digit', minute: '2-digit' });
 }
 const hojeSrv = () => { const off = offSrv(); if (off == null) return null; const d = new Date(R.ms + off); return d.toISOString().slice(0, 10); };
@@ -48,6 +49,7 @@ function agData(i) {
 function upDesk(a) {
   const el = $('d' + a), A = AG[a], g = agData(a), pos = g.pos, mt = META[A.n] || 0;
   el.classList.remove('idle', 'buy', 'sell');
+  el.style.order = pos ? -1 : (g.n > 0 ? 0 : 1);   // quem está posicionado vem primeiro
   if (pos) { el.classList.add(pos.lado > 0 ? 'buy' : 'sell'); $('s' + a).innerHTML = `<b>${pos.lado > 0 ? 'COMPRADO' : 'VENDIDO'}</b> ${fmt(pos.lote)} @ ${fmt(pos.preco, A.s === 'USDJPY' ? 3 : 2)} · <span class="${pos.lucro >= 0 ? 'pos' : 'neg'}">${sg(pos.lucro)}</span><br>desde ${hBR(pos.desde)} (Brasília)`; }
   else { el.classList.add('idle'); $('s' + a).innerHTML = g.last == null ? 'procurando setup' : `procurando setup<br>última: <span class="${g.last >= 0 ? 'pos' : 'neg'}">${sg(g.last)}</span>`; }
   $('m' + a).innerHTML = `mês <span class="${g.musd >= 0 ? 'pos' : 'neg'}">${sg(g.musd)} (${sg(g.mpct)}%)</span>`;
@@ -107,6 +109,9 @@ function render() {
   $('b_tes_sev').className = 'sev ' + (falta > 0 ? 'at' : 'ok'); $('b_tes_sev').textContent = falta > 0 ? 'salário a sacar' : 'em dia';
   $('b_tes').innerHTML = `Salário do mês: 1% do saldo do início do mês = ${usd(sal)}${falta > 0 ? ` (falta sacar ${usd(falta)})` : ' (já sacado)'}. Extra no fim do trimestre: 50% do lucro do trimestre. Total sacado: ${usd(Hh.sacado_total)}.`;
   AG.forEach((_, i) => upDesk(i));
+  // Operando agora: posições abertas no topo
+  const ab = pos.slice().sort((x, y) => (y.lucro || 0) - (x.lucro || 0));
+  $('agora').innerHTML = ab.length ? `<div class="tw"><table><tr><th>Operador</th><th>Robô</th><th>Ativo</th><th>Lado</th><th>Lote</th><th>Entrada</th><th>Resultado US$</th><th>Desde</th></tr>${ab.map(q => { const g = AG.find(g => g.n === q.a) || {}; return `<tr><td><b>${g.p || '—'}</b></td><td>${q.a || '—'}</td><td>${q.ativo || g.s || ''}</td><td class="${q.lado > 0 ? 'lado-c' : 'lado-v'}">${q.lado > 0 ? 'COMPRA' : 'VENDA'}</td><td>${fmt(q.lote)}</td><td>${fmt(q.preco, (q.ativo || g.s) === 'USDJPY' ? 3 : 2)}</td><td class="${q.lucro >= 0 ? 'pos' : 'neg'}"><b>${sg(q.lucro)}</b>${BRL ? ` <small>R$ ${sg(q.lucro * BRL)}</small>` : ''}</td><td>${hBR(q.desde)}</td></tr>`; }).join('')}<tr><td colspan="6"><b>Total em aberto</b></td><td class="${flut >= 0 ? 'pos' : 'neg'}"><b>${sg(flut)}</b></td><td></td></tr></table></div>` : '<div class="vazio">Nenhum operador posicionado agora. Todos procurando setup.</div>';
   try { renderStaff(vivo, idade, eq, bal); } catch (e) { console.log(e); }
 }
 function renderHist() {
@@ -134,7 +139,7 @@ auth.onAuthStateChanged(u => {
   $('login').hidden = !!u; $('app').hidden = !u;
   if (!u) return;
   const r1 = db.ref('led/rapido'), r2 = db.ref('led/historico');
-  const a = r1.on('value', s => { R = s.val(); render(); }, e => { $('liveTxt').textContent = 'sem permissão: ' + e.code; });
+  const a = r1.on('value', s => { const pr = R; R = s.val(); if (!pr) renderHist(); render(); }, e => { $('liveTxt').textContent = 'sem permissão: ' + e.code; });
   const b = r2.on('value', s => { Hh = s.val(); renderHist(); render(); });
   const r3 = db.ref('led/agenda'); const c3 = r3.on('value', s => { AGD = s.val(); render(); });
   subs.push(() => r1.off('value', a), () => r2.off('value', b), () => r3.off('value', c3));
@@ -188,7 +193,8 @@ function renderLab(J) {
   $('labAt').textContent = `${J.noites} noites · ${Number(J.testados).toLocaleString('pt-BR')} ideias testadas · atualizado ${J.atualizado}`;
   $('labPes').innerHTML = J.pesquisadores.map((p, k) => `<article class="boss" style="border-left-color:${p.cor}"><div class="hd"><div class="face">${face(311 + k * 53, p.cor, p.hoje_aprovados > 0 ? 1 : 0)}</div><div class="who"><b>${p.nome}</b><small>${p.cargo}</small></div><span class="sev ${p.nome === 'Sérgio' ? 'ok' : p.ativos.length ? (p.hoje_aprovados ? 'ok' : 'at') : 'al'}">${p.nome === 'Sérgio' ? (J.validados || 0) + ' validados' : p.ativos.length ? (p.hoje_aprovados ? p.hoje_aprovados + ' novo' + (p.hoje_aprovados > 1 ? 's' : '') : 'pesquisando') : 'sem dados'}</span></div><div class="msg">${p.ativos.length ? 'Última ideia: ' + (p.ultima || '—') : p.status}</div>${p.nome === 'Sérgio' ? '' : `<div class="nums"><span>hoje ${p.hoje_testados} testes</span><span>total ${Number(p.testados).toLocaleString('pt-BR')}</span><span>aprovados ${p.aprovados}</span></div>`}</article>`).join('');
   $('labRegra').textContent = J.regra;
-  $('labTit').textContent = `Setups aprovados (${J.aprovados.length}) — aguardando sua decisão; nada entra no robô sem você`;
+  $('labPesRes').textContent = `· hoje ${J.pesquisadores.reduce((t, p) => t + (p.hoje_testados || 0), 0).toLocaleString('pt-BR')} ideias testadas, ${J.pesquisadores.reduce((t, p) => t + (p.hoje_aprovados || 0), 0)} aprovadas`;
+  $('labTit').textContent = `Setups aprovados (${J.aprovados.length}) · toque para ver · nada entra no robô sem você`;
   $('labAp').innerHTML = J.aprovados.length ? J.aprovados.map(a => { const m = a.m; return `<details class="ap"><summary><b>${a.valid && a.valid.ok ? '✅ ' : ''}${a.desc}${a.obs ? `<span class="obs ${{ 'confirmado': 'ok', 'falhou na prática': 'al', 'abaixo do esperado': 'at' }[a.obs.status] || 'nd'}">${a.obs.status}${a.obs.n ? ' · ' + a.obs.n + ' op · ' + fp(a.obs.pts) + ' pts' : ''}</span>` : ''}</b><span class="pos">${fp(m.pts_mes)} pts/mês</span></summary><div class="det">${a.quem} · ${a.data.split('-').reverse().join('/')} · ${m.n} operações (${String(m.ops_mes).replace('.', ',')}/mês) · acerto ${String(m.acerto).replace('.', ',')}% · fator de lucro ${String(m.pf).replace('.', ',')} · média ${fp(m.media)} pts/op · queda máx ${fp(-m.dd)} pts<br>2022-2024: ${fp(m.is_pts)} pts (FL ${String(m.is_pf).replace('.', ',')}) · 2025-2026: ${fp(m.oos_pts)} pts (FL ${String(m.oos_pf).replace('.', ',')}) · entrada aleatória igual: FL ${String(m.base_pf).replace('.', ',')}, ${fp(m.base_media)} pts/op · vizinhos lucrando ${a.vizinhos}${a.valid ? `<br><b class="${a.valid.ok ? 'pos' : 'neg'}">Validador: ${a.valid.ok ? 'APROVADO' : 'REPROVADO'}</b> · custo dobrado FL ${String(a.valid.custo2_pf).replace('.', ',')} (${fp(a.valid.custo2_pts)} pts) · queda Monte Carlo 95% ${fp(-a.valid.dd95)} pts · últimos 6 meses ${fp(a.valid.ult6m)} pts (${a.valid.ult6m_n} op)` : ''}<table><tr>${Object.keys(m.anos).map(y => `<td>${y}</td>`).join('')}</tr><tr>${Object.values(m.anos).map(v => `<td class="${v >= 0 ? 'pos' : 'neg'}">${fp(v)}</td>`).join('')}</tr></table></div></details>`; }).join('') : '<p class="note">Nenhum aprovado ainda.</p>';
 }
 

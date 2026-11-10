@@ -189,6 +189,14 @@ aside h2{color:var(--navy)}
 #rel img.cv{width:100%;border:1px solid #e2e5ea}#rel .disc{font-size:.65rem;color:#6b7280;margin-top:16px;line-height:1.4}
 </style>
 <meta name="theme-color" content="#0f1f3d">
+<style>
+.agora table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:6px;font-size:.88rem}
+.agora td,.agora th{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.agora th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.agora .tw{overflow-x:auto}.agora .vazio{background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px;color:var(--mut)}
+.lado-c{color:var(--buy);font-weight:700}.lado-v{color:var(--sell);font-weight:700}
+#labRoom summary{cursor:pointer}
+</style>
 </head><body>
 <div id="login" hidden><img src="logo-branco.png" alt="LED Invest"><p style="margin:0">Escritório ao vivo</p>
 <input id="em" type="email" placeholder="e-mail" autocomplete="username"><input id="pw" type="password" placeholder="senha" autocomplete="current-password">
@@ -207,6 +215,9 @@ aside h2{color:var(--navy)}
   <div class="kpi"><span>Sacado</span><strong id="kSac">—</strong><em id="kSacSub"></em></div>
   <div class="kpi"><span>Em operação</span><strong id="kAbertas">—</strong><em id="kOps"></em></div>
 </section>
+<section class="room agora" style="margin-top:16px"><h2><b>Operando agora</b> posições abertas · horário de Brasília</h2><div id="agora"></div></section>
+<section class="room"><h2><b>Mesa Ouro</b> LED Alpha Gold · XAUUSD</h2><div class="desks" id="mOuro"></div></section>
+<section class="room"><h2><b>Mesa Global</b> LED Alpha Global · BTC, US100, GER40, USDJPY</h2><div class="desks" id="mGlobal"></div></section>
 <section class="room" style="margin-top:16px"><h2><b>Andamento</b> resultado × meta</h2>
   <div class="per" id="per"></div>
 </section>
@@ -218,13 +229,11 @@ aside h2{color:var(--navy)}
     <details class="labres" id="detCtl"><summary><b>Controladoria: resultado por mês</b></summary><div id="ctlTab" class="tw"></div></details>
   </section>
   <section class="room" id="labRoom"><h2><b>Laboratório</b> pesquisa de novos setups · <span id="labAt">—</span></h2>
-    <div class="board" id="labPes"></div>
-    <div class="labres"><div class="labhd"><b id="labTit">Setups aprovados</b><span id="labRegra" class="note" style="margin:0"></span></div><div id="labAp"></div></div>
+    <details class="labres" id="detPes"><summary><b>Pesquisadores</b> <span class="note" id="labPesRes" style="margin:0"></span></summary><div class="board" id="labPes" style="margin-top:10px"></div></details>
+    <details class="labres" id="detAp"><summary><b id="labTit">Setups aprovados</b></summary><p id="labRegra" class="note"></p><div id="labAp"></div></details>
   </section>
-  <section class="room"><h2><b>Mesa Ouro</b> LED Alpha Gold · XAUUSD</h2><div class="desks" id="mOuro"></div></section>
-  <section class="room"><h2><b>Mesa Global</b> LED Alpha Global · BTC, US100, GER40, USDJPY</h2><div class="desks" id="mGlobal"></div></section>
   <p class="note">Dados enviados pelo MT5 da VPS a cada 3 s. Meta individual = metade da média mensal de cada robô no teste.</p>
-</div><aside><h2>Resultado desde 04/11 (US$)</h2><canvas id="eq" width="600" height="180"></canvas><h2 style="margin-top:12px">Pregão</h2><ul id="feed"></ul></aside></div>
+</div><aside><h2>Resultado desde 04/11 (US$)</h2><canvas id="eq" width="600" height="180"></canvas><h2 style="margin-top:12px">Pregão · horário de Brasília</h2><ul id="feed"></ul></aside></div>
 </div>
 <div id="rel"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
