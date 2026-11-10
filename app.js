@@ -28,15 +28,21 @@ dolar(); dolar0(); setInterval(dolar, 60000);
 // ---- horário de Brasília: a corretora manda hora do servidor; a diferença vem de R.servidor × R.ms ----
 const BR = { timeZone: 'America/Sao_Paulo' };
 function srvMs(t) { const m = String(t || '').match(/(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})[ T]+(\d{2}):(\d{2})(?::(\d{2}))?/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) : null; }
-function offSrv() { const s = R && srvMs(R.servidor); return s && R.ms ? Math.round((s - R.ms) / 9e5) * 9e5 : null; }   // servidor − UTC, arredondado a 15 min
+// fuso do servidor da corretora: compara a hora do servidor com o relógio do aparelho (não depende de R.ms, que pode vir na hora do servidor)
+let OFF = null; try { const v = localStorage.getItem('led_off'); if (v != null) OFF = +v; } catch (e) { }
+function offSrv() {
+  const s = R && srvMs(R.servidor);
+  if (s) { const o = Math.round((s - Date.now()) / 9e5) * 9e5; if (Math.abs(o) <= 14 * 36e5 && (OFF == null || Math.abs(Date.now() - (R.ms || 0)) < 6e5 || Math.abs(o - OFF) < 9e5)) { if (o !== OFF) { OFF = o; try { localStorage.setItem('led_off', o); } catch (e) { } } } }
+  return OFF != null ? OFF : 2 * 36e5;   // padrão: servidor GMT+2
+}
 function hBR(t, comData) {
   const off = offSrv(); if (off == null || t == null) return t ?? '';
   let ms = srvMs(t);
-  if (ms == null) { const m2 = String(t).match(/^(\d{2})[\/.](\d{2})[ ,]+(\d{2}):(\d{2})(?::(\d{2}))?/); if (m2) { const d = new Date(R.ms + off); ms = Date.UTC(d.getUTCFullYear(), m2[2] - 1, +m2[1], +m2[3], +m2[4], +(m2[5] || 0)); } }
-  if (ms == null) { const m = String(t).match(/(?:^|\s)(\d{2}):(\d{2})(?::(\d{2}))?/); if (!m) return t; const d = new Date(R.ms + off); ms = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), +m[1], +m[2], +(m[3] || 0)); comData = false; }
+  if (ms == null) { const m2 = String(t).match(/^(\d{2})[\/.](\d{2})[ ,]+(\d{2}):(\d{2})(?::(\d{2}))?/); if (m2) { const d = new Date(Date.now() + off); ms = Date.UTC(d.getUTCFullYear(), m2[2] - 1, +m2[1], +m2[3], +m2[4], +(m2[5] || 0)); } }
+  if (ms == null) { const m = String(t).match(/(?:^|\s)(\d{2}):(\d{2})(?::(\d{2}))?/); if (!m) return t; const d = new Date(Date.now() + off); ms = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), +m[1], +m[2], +(m[3] || 0)); comData = false; }
   return new Date(ms - off).toLocaleString('pt-BR', { ...BR, ...(comData === false ? {} : { day: '2-digit', month: '2-digit' }), hour: '2-digit', minute: '2-digit' });
 }
-const hojeSrv = () => { const off = offSrv(); if (off == null) return null; const d = new Date(R.ms + off); return d.toISOString().slice(0, 10); };
+const hojeSrv = () => { const s = R && srvMs(R.servidor); return s ? new Date(s).toISOString().slice(0, 10) : null; };
 function pop(i, v) {
   const el = $('d' + i); if (!el) return; const p = document.createElement('span'); p.className = 'pop ' + (v >= 0 ? 'pos' : 'neg'); p.textContent = sg(v); el.appendChild(p);
   el.classList.add(v >= 0 ? 'flash-w' : 'flash-l'); setTimeout(() => { p.remove(); el.classList.remove('flash-w', 'flash-l'); }, 1600);
@@ -64,7 +70,8 @@ function render() {
   const idade = (Date.now() - (R.ms || 0)) / 1000;
   const vivo = idade < 20; $('liveTag').classList.toggle('on', vivo);
   $('liveTxt').textContent = vivo ? 'ao vivo' : `sem sinal há ${idade < 3600 ? Math.round(idade / 60) + ' min' : Math.round(idade / 3600) + ' h'}`;
-  $('clock').innerHTML = `${R.ms ? new Date(R.ms).toLocaleString('pt-BR', { ...BR, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}<small>horário de Brasília · servidor ${(R.servidor || '').slice(11, 16)} · conta ${R.login || ''}</small>`;
+  const srvT = srvMs(R.servidor), tBR = srvT ? srvT - offSrv() : R.ms;
+  $('clock').innerHTML = `${tBR ? new Date(tBR).toLocaleString('pt-BR', { ...BR, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}<small>horário de Brasília · servidor ${(R.servidor || '').slice(11, 16)} · conta ${R.login || ''}</small>`;
   const bal = R.saldo, flut = R.flutuante, eq = bal + flut;   // capital sem bônus/crédito da corretora
   $('kSaldo').textContent = usd(bal); $('kSaldoSub').innerHTML = `capital ${usd(eq)} · flutuante <span class="${flut >= 0 ? 'pos' : 'neg'}">${sg(flut)}</span>`;
   $('kXau').textContent = R.xau ? 'US$ ' + fmt(R.xau) : '—';
