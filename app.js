@@ -20,9 +20,22 @@ const BOSS = [{ id: 'risco', p: 'Helena', c: 'Gestora de Risco', cor: '#e0645c' 
 $('board').innerHTML = BOSS.map((b, k) => `<article class="boss"><div class="hd"><div class="face">${face(101 + k * 37, b.cor, 1)}</div><div class="who"><b>${b.p}</b><small>${b.c}</small></div><span class="sev ok" id="b_${b.id}_sev">ok</span></div><div class="msg" id="b_${b.id}">—</div></article>`).join('');
 
 
-let R = null, Hh = null, lastKey = null, BRL = null;
+let R = null, Hh = null, lastKey = null, BRL = null, BRL0 = null;
 async function dolar() { try { const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', { cache: 'no-store' }); const j = await r.json(); BRL = parseFloat(j.USDBRL.bid); render(); } catch (e) { } }
-dolar(); setInterval(dolar, 60000);
+// dólar do dia de início (04/11/2026): separa o lucro do trading do ganho/perda só pela variação do dólar
+async function dolar0() { try { const r = await fetch('https://economia.awesomeapi.com.br/json/daily/USD-BRL/?start_date=20261104&end_date=20261104'); const j = await r.json(); if (j && j[0]) { BRL0 = parseFloat(j[0].bid); render(); } } catch (e) { } }
+dolar(); dolar0(); setInterval(dolar, 60000);
+// ---- horário de Brasília: a corretora manda hora do servidor; a diferença vem de R.servidor × R.ms ----
+const BR = { timeZone: 'America/Sao_Paulo' };
+function srvMs(t) { const m = String(t || '').match(/(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})[ T]+(\d{2}):(\d{2})(?::(\d{2}))?/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) : null; }
+function offSrv() { const s = R && srvMs(R.servidor); return s && R.ms ? Math.round((s - R.ms) / 9e5) * 9e5 : null; }   // servidor − UTC, arredondado a 15 min
+function hBR(t, comData) {
+  const off = offSrv(); if (off == null || t == null) return t ?? '';
+  let ms = srvMs(t);
+  if (ms == null) { const m = String(t).match(/^(\d{2}):(\d{2})(?::(\d{2}))?/); if (!m) return t; const d = new Date(R.ms + off); ms = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), +m[1], +m[2], +(m[3] || 0)); comData = false; }
+  return new Date(ms - off).toLocaleString('pt-BR', { ...BR, ...(comData === false ? {} : { day: '2-digit', month: '2-digit' }), hour: '2-digit', minute: '2-digit' });
+}
+const hojeSrv = () => { const off = offSrv(); if (off == null) return null; const d = new Date(R.ms + off); return d.toISOString().slice(0, 10); };
 function pop(i, v) {
   const el = $('d' + i); if (!el) return; const p = document.createElement('span'); p.className = 'pop ' + (v >= 0 ? 'pos' : 'neg'); p.textContent = sg(v); el.appendChild(p);
   el.classList.add(v >= 0 ? 'flash-w' : 'flash-l'); setTimeout(() => { p.remove(); el.classList.remove('flash-w', 'flash-l'); }, 1600);
@@ -35,7 +48,7 @@ function agData(i) {
 function upDesk(a) {
   const el = $('d' + a), A = AG[a], g = agData(a), pos = g.pos, mt = META[A.n] || 0;
   el.classList.remove('idle', 'buy', 'sell');
-  if (pos) { el.classList.add(pos.lado > 0 ? 'buy' : 'sell'); $('s' + a).innerHTML = `<b>${pos.lado > 0 ? 'COMPRADO' : 'VENDIDO'}</b> ${fmt(pos.lote)} @ ${fmt(pos.preco, A.s === 'USDJPY' ? 3 : 2)} · <span class="${pos.lucro >= 0 ? 'pos' : 'neg'}">${sg(pos.lucro)}</span><br>desde ${pos.desde}`; }
+  if (pos) { el.classList.add(pos.lado > 0 ? 'buy' : 'sell'); $('s' + a).innerHTML = `<b>${pos.lado > 0 ? 'COMPRADO' : 'VENDIDO'}</b> ${fmt(pos.lote)} @ ${fmt(pos.preco, A.s === 'USDJPY' ? 3 : 2)} · <span class="${pos.lucro >= 0 ? 'pos' : 'neg'}">${sg(pos.lucro)}</span><br>desde ${hBR(pos.desde)} (Brasília)`; }
   else { el.classList.add('idle'); $('s' + a).innerHTML = g.last == null ? 'procurando setup' : `procurando setup<br>última: <span class="${g.last >= 0 ? 'pos' : 'neg'}">${sg(g.last)}</span>`; }
   $('m' + a).innerHTML = `mês <span class="${g.musd >= 0 ? 'pos' : 'neg'}">${sg(g.musd)} (${sg(g.mpct)}%)</span>`;
   const bi = $('b' + a); bi.style.width = (mt > 0 ? Math.min(100, 100 * Math.abs(g.mpct) / mt) : (g.mpct < 0 ? 100 : 0)) + '%'; bi.className = g.mpct < 0 ? 'neg' : '';
@@ -49,11 +62,16 @@ function render() {
   const idade = (Date.now() - (R.ms || 0)) / 1000;
   const vivo = idade < 20; $('liveTag').classList.toggle('on', vivo);
   $('liveTxt').textContent = vivo ? 'ao vivo' : `sem sinal há ${idade < 3600 ? Math.round(idade / 60) + ' min' : Math.round(idade / 3600) + ' h'}`;
-  $('clock').innerHTML = `${(R.servidor || '').slice(0, 16)}<small>servidor · Brasília ${R.ms ? new Date(R.ms).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''} · conta ${R.login || ''}</small>`;
+  $('clock').innerHTML = `${R.ms ? new Date(R.ms).toLocaleString('pt-BR', { ...BR, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}<small>horário de Brasília · servidor ${(R.servidor || '').slice(11, 16)} · conta ${R.login || ''}</small>`;
   const bal = R.saldo, flut = R.flutuante, eq = bal + flut;   // capital sem bônus/crédito da corretora
   $('kSaldo').textContent = usd(bal); $('kSaldoSub').innerHTML = `capital ${usd(eq)} · flutuante <span class="${flut >= 0 ? 'pos' : 'neg'}">${sg(flut)}</span>`;
   $('kXau').textContent = R.xau ? 'US$ ' + fmt(R.xau) : '—';
-  if (BRL) { $('kReal').textContent = 'R$ ' + fmt(bal * BRL); $('kDolar').textContent = `dólar R$ ${fmt(BRL, 4)} · capital R$ ${fmt(eq * BRL)}`; }
+  if (BRL) {
+    $('kReal').textContent = 'R$ ' + fmt(bal * BRL);
+    const capI = Hh.cap_base || 0, plU = ((Hh.periodos || {}).total || {}).pl || 0;
+    const doTrade = plU * BRL, doDolar = BRL0 && capI ? capI * (BRL - BRL0) : null;
+    $('kDolar').innerHTML = `dólar R$ ${fmt(BRL, 4)}${BRL0 ? ` (04/11: R$ ${fmt(BRL0, 4)})` : ''}<br>lucro do trading <span class="${doTrade >= 0 ? 'pos' : 'neg'}">R$ ${sg(doTrade)}</span>${doDolar != null ? ` · do dólar <span class="${doDolar >= 0 ? 'pos' : 'neg'}">R$ ${sg(doDolar)}</span>` : ''}`;
+  }
   const P = Hh.periodos || {}, dIni = Hh.inicio || '04/11/2026';
   const dias = Math.max(1, (Date.now() - new Date(2026, 10, 4).getTime()) / 864e5);
   const metas = { dia: METAT / 21, semana: METAT / 4.33, mes: METAT, total: METAT * dias / 30.4 };
@@ -69,7 +87,9 @@ function render() {
   const dd = capB + picoPL > 0 ? 100 * Math.max(0, picoPL - plT) / (capB + picoPL) : 0, ddm = Math.max(100 * (Hh.dd_max || 0), dd);
   $('kDD').textContent = fmt(dd) + '%'; $('kDDSub').textContent = 'máx ' + fmt(ddm) + '%';
   $('kSac').textContent = usd(Hh.sacado_total); $('kSacSub').textContent = `este mês ${usd(Hh.sacado_mes)} · desde ${Hh.inicio || '04/11'}`;
-  const pos = R.pos ? Object.values(R.pos) : []; $('kAbertas').textContent = pos.length; $('kOps').textContent = Hh.fechadas + ' fechadas';
+  const pos = R.pos ? Object.values(R.pos) : []; $('kAbertas').textContent = pos.length; const fd = Hh.feed ? Object.values(Hh.feed) : [], hj = hojeSrv();
+  const nHoje = P.dia && P.dia.n != null ? P.dia.n : fd.filter(it => it.v != null && hj && String(it.h || '').replace(/\./g, '-').startsWith(hj)).length;
+  $('kOps').textContent = `${nHoje} fechada${nHoje === 1 ? '' : 's'} hoje`;
   // Helena: risco
   const xau = pos.filter(p => p.ativo && p.ativo.indexOf('XAU') === 0), cx = xau.filter(p => p.lado > 0).length, vx = xau.length - cx;
   const marg = R.margem > 0 ? 100 * R.margem / eq : 0; const al = [];
@@ -91,7 +111,7 @@ function render() {
 }
 function renderHist() {
   if (!Hh) return; const f = Hh.feed ? Object.values(Hh.feed) : [];
-  $('feed').innerHTML = f.map(it => `<li><time>${it.h}</time><span class="${it.v == null ? '' : it.v >= 0 ? 'pos' : 'neg'}">${it.t}</span></li>`).join('');
+  $('feed').innerHTML = f.map(it => `<li><time>${hBR(it.h)}</time><span class="${it.v == null ? '' : it.v >= 0 ? 'pos' : 'neg'}">${it.t}</span></li>`).join('');
   if (f.length) { const key = f[0].h + f[0].t; if (lastKey !== null && key !== lastKey) { for (const it of f) { if (it.h + it.t === lastKey) break; const i = AG.findIndex(a => a.n === it.a); if (i >= 0 && it.v != null) pop(i, it.v); } } lastKey = key; }
   const pts = (Hh.curva ? Object.values(Hh.curva) : []).map((c, i) => [i, c[1]]);
   const c = $('eq'), x = c.getContext('2d'), W = c.width, H = c.height; x.clearRect(0, 0, W, H);
